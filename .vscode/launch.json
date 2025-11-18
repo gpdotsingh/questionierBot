@@ -1,0 +1,38 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "Debug API (uvicorn no-reload)",
+        "type": "python",
+        "request": "launch",
+        "module": "uvicorn",
+        "args": [
+          "server:app",
+          "--host", "127.0.0.1",
+          "--port", "8000"
+        ],
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}/src"
+        },
+        "cwd": "${workspaceFolder}",
+        "justMyCode": true
+      },
+      {
+        "name": "Debug API (uvicorn reload)",
+        "type": "python",
+        "request": "launch",
+        "module": "uvicorn",
+        "args": [
+          "server:app",
+          "--host", "127.0.0.1",
+          "--port", "8000",
+          "--reload"
+        ],
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}/src"
+        },
+        "cwd": "${workspaceFolder}",
+        "justMyCode": true
+      }
+    ]
+  }

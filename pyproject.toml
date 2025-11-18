@@ -1,0 +1,35 @@
+[project]
+name = "questionier"
+version = "0.1.0"
+description = "End-to-end QA pipeline with agentic splitter and Chroma"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "fastapi",
+  "uvicorn",
+  "pydantic>=2",
+  "pydantic-settings",
+  "python-dotenv",
+  "pyyaml",
+  "pandas",
+  "regex",
+  "networkx",
+  "chromadb",
+  "langchain",
+  "langchain-core",
+  "langchain-community",
+  "langchain-ollama",
+  "langchain-openai",
+  "langchain-text-splitters",
+  "sentence-transformers",
+  "tiktoken",
+  "nltk",
+  "spacy",
+  "jq>=1.10.0",
+]
+
+[tool.uv]
+dev-dependencies = ["pytest", "ruff"]
+
+[tool.ruff]
+line-length = 100

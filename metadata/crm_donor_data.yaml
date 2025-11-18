@@ -1,0 +1,24 @@
+dataset:
+  name: "CRM Donor Simulation"
+  granularity: "donor"  # donor | transaction
+fields:
+  donor_id: "DonorID"
+  first_name: "FirstName"
+  last_name: "LastName"
+  email: "Email"
+  phone: "Phone"
+  city: "City"
+  state: "State"
+  zipcode: "ZipCode"
+  last_donation_date: "LastDonationDate"
+  total_gifts: "TotalGifts"
+  total_amount: "TotalAmountDonated"
+  event_participation: "EventParticipation"
+  engagement_score: "EngagementScore"
+meta:
+  source_type: "csv"
+  source_path: "data/CRM_Donor_Simulation_Dataset.csv"
+synonyms:
+  total donation: [donation amount, total amount donated]
+  activity: [engagement, engagement score]
+  region: [state]
