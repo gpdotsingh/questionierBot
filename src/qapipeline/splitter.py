@@ -95,6 +95,7 @@ class _LLMRouter:
             "Output JSON now:"
         )
 
+
     def ask_json(self, prompt: str) -> Optional[dict]:
         try:
             if self._openai:

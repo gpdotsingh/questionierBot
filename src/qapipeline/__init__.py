@@ -8,6 +8,6 @@ __all__ = [
     "Step","Plan",
     "CompilerInput","CompilerOutput",
     "ValidatorInput","ValidatorOutput",
-    "QuestionSplitter","split_query_simple",
+    "LLMRouter","split_query_simple",
     "Orchestrator","LLMCompiler","Validator",
 ]

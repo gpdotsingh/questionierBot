@@ -236,7 +236,7 @@ guards:
         window_days: 90
     - name: group_by_state_toggle
       when:
-        "by state" in user_text.lower()
+        "by state" 
       action: set_flag
       set:
         group_by_state: true
