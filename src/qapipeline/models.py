@@ -1,17 +1,13 @@
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 
-@dataclass
-class Step:
-    id: str
-    text: str
 
 @dataclass
 class Plan:
     original_question: str
     used_llm: bool
-    ordered_steps: List[Step]
+    ordered_steps: Optional[Dict[str, Any]]
 
 @dataclass
 class CompilerInput:

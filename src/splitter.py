@@ -1,13 +1,14 @@
 # src/splitter.py
 from __future__ import annotations
 import os, re, json, glob
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, TYPE_CHECKING
+from qapipeline.settings import get_provider_runtime, ensure_env_loaded
 
-# ---------- dotenv ----------
-try:
-    from dotenv import load_dotenv
-except Exception:
-    def load_dotenv(*args, **kwargs): return None
+if TYPE_CHECKING:
+    from openai import OpenAI as OpenAIClient
+    from ollama import Client as OllamaClient
+
+ensure_env_loaded()
 
 # ---------- YAML metadata ----------
 try:
@@ -20,17 +21,6 @@ try:
     from src.ingestdata.faiss_store import FaissVectorStoreCosine
 except Exception:
     FaissVectorStoreCosine = None
-
-# ---------- LLM providers ----------
-try:
-    from openai import OpenAI  # >=1.x
-except Exception:
-    OpenAI = None
-
-try:
-    from ollama import Client as OllamaClient
-except Exception:
-    OllamaClient = None
 
 # ---------- Regex helpers ----------
 JOINERS = re.compile(r"\b(?:and|also|plus|as well as)\b", re.I)
@@ -66,25 +56,12 @@ class _LLMRouter:
       OLLAMA_BASE_URL (default http://127.0.0.1:11434), OLLAMA_GEN_MODEL (default llama3.1)
     """
     def __init__(self) -> None:
-        load_dotenv()
-        self.provider = (os.getenv("SPLITTER_PROVIDER") or "").lower().strip()
-
-        # OpenAI
-        self.openai_key = os.getenv("OPENAI_API_KEY")
-        self.openai_model = os.getenv("OPENAI_MODEL", "gpt-4o")
-
-        # Ollama
-        self.ollama_url = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
-        self.ollama_model = os.getenv("OLLAMA_GEN_MODEL", "llama3.1")
-
-        self._openai = None
-        self._ollama = None
-        if self.provider == "openai" and OpenAI and self.openai_key:
-            self._openai = OpenAI(api_key=self.openai_key)
-        elif self.provider == "ollama" and OllamaClient:
-            self._ollama = OllamaClient(host=self.ollama_url)
-        else:
-            self.provider = ""  # no LLM available
+        runtime = get_provider_runtime("splitter")
+        self.provider = runtime.provider
+        self._openai: Optional["OpenAIClient"] = runtime.openai_client
+        self.openai_model = runtime.openai_model
+        self._ollama: Optional["OllamaClient"] = runtime.ollama_client
+        self.ollama_model = runtime.ollama_model
 
     # ---- Prompt templates (single prompt string: “prompt-first”) ----
     @staticmethod

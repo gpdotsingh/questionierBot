@@ -2,13 +2,10 @@
 from __future__ import annotations
 import os, re, json, glob
 from typing import Dict, Any, List, Optional
-from .models import Step, Plan
+from .models import Plan
+from .settings import get_provider_runtime, ensure_env_loaded
 
-# ---------- dotenv ----------
-try:
-    from dotenv import load_dotenv
-except Exception:
-    def load_dotenv(*args, **kwargs): return None
+ensure_env_loaded()
 
 # ---------- YAML metadata ----------
 try:
@@ -21,17 +18,6 @@ try:
     from src.ingestdata.faiss_store import FaissVectorStoreCosine
 except Exception:
     FaissVectorStoreCosine = None
-
-# ---------- LLM providers ----------
-try:
-    from openai import OpenAI  # >=1.x
-except Exception:
-    OpenAI = None
-
-try:
-    from ollama import Client as OllamaClient
-except Exception:
-    OllamaClient = None
 
 # ---------- Regex helpers ----------
 JOINERS = re.compile(r"\b(?:and|also|plus|as well as)\b", re.I)
@@ -52,20 +38,12 @@ def _pack_nodes(nodes: List[Dict[str, Any]]) -> Dict[str, Any]:
 
 class _LLMRouter:
     def __init__(self) -> None:
-        load_dotenv()
-        self.provider = (os.getenv("SPLITTER_PROVIDER") or "").lower().strip()
-        self.openai_key = os.getenv("OPENAI_API_KEY")
-        self.openai_model = os.getenv("OPENAI_MODEL", "gpt-4o")
-        self.ollama_url = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
-        self.ollama_model = os.getenv("OLLAMA_GEN_MODEL", "llama3.1")
-        self._openai = None
-        self._ollama = None
-        if self.provider == "openai" and OpenAI and self.openai_key:
-            self._openai = OpenAI(api_key=self.openai_key)
-        elif self.provider == "ollama" and OllamaClient:
-            self._ollama = OllamaClient(host=self.ollama_url)
-        else:
-            self.provider = ""
+        runtime = get_provider_runtime("splitter")
+        self.provider = runtime.provider
+        self._openai = runtime.openai_client
+        self.openai_model = runtime.openai_model
+        self._ollama = runtime.ollama_client
+        self.ollama_model = runtime.ollama_model
 
     @staticmethod
     def _prompt_header() -> str:
@@ -294,16 +272,6 @@ class QuestionSplitter:
                 augmented = f"{query} | {' '.join(terms)}"
         return _rule_based_tree(augmented)
 
-    def _flatten_tree(self, tree: Dict[str, Any]) -> List[Step]:
-        steps: List[Step] = []
-        def walk(node_key: str, node_val: Dict[str, Any]):
-            steps.append(Step(node_key, node_val.get("text", "")))
-            for child in node_val.get("children", []):
-                for ck, cv in child.items():
-                    walk(ck, cv)
-        for k, v in sorted(tree.items(), key=lambda kv: int(kv[0][1:]) if kv[0].startswith("Q") and kv[0][1:].isdigit() else 0):
-            walk(k, v)
-        return steps
 
     def plan(self, question: str) -> Plan:
         q = _norm(question)
@@ -311,10 +279,7 @@ class QuestionSplitter:
         used_llm = tree is not None
         if tree is None:
             tree = self._fallback_tree(q)
-        steps = self._flatten_tree(tree)
-        if not steps:
-            steps = [Step("Q1", q)]
-        return Plan(original_question=q, used_llm=used_llm, ordered_steps=steps)
+        return Plan(original_question=q, used_llm=used_llm, ordered_steps=tree)
 
 def split_query_simple(user_query: str) -> Dict[str, Any]:
     splitter = QuestionSplitter()

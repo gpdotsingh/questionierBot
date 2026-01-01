@@ -11,18 +11,8 @@ SRC_DIR = HERE / "src"
 if SRC_DIR.exists() and str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-# (Optional) load .env (does NOT forward provider/model explicitly)
-try:
-    from dotenv import load_dotenv, find_dotenv
-    env_file = (HERE / ".env")
-    if env_file.exists():
-        load_dotenv(env_file)
-    else:
-        found = find_dotenv()
-        if found:
-            load_dotenv(found)
-except Exception:
-    pass
+from qapipeline.settings import ensure_env_loaded
+ensure_env_loaded()
 
 from qapipeline import (
     QuestionSplitter, Orchestrator, LLMCompiler, Validator,
