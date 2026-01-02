@@ -3,6 +3,7 @@ from typing import List
 from .models import Plan
 from .settings import get_provider_runtime, ensure_env_loaded
 import re
+import json
 
 # ---------- Optional FAISS store (cosine) ----------
 try:
@@ -25,4 +26,7 @@ class Orchestrator:
         provider = self.runtime.provider
         self.provider = provider
         answers: List[str] = []
+        question = json.dumps(plan.ordered_steps, indent=2)
+        print(question)  # plain JSON without dict_values
+        
         cumulative = []

@@ -55,3 +55,9 @@ python -c "import json,sys; sys.path.insert(0,'src'); \from qapipeline.splitter 
 ====================================================
 
 Run the whole project 
+
+
+CRM_2026 pwd
+
+Server admin login
+chatbotforservice

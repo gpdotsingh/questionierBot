@@ -279,7 +279,7 @@ class QuestionSplitter:
         used_llm = tree is not None
         if tree is None:
             tree = self._fallback_tree(q)
-        return Plan(original_question=q, used_llm=used_llm, ordered_steps=tree)
+        return Plan(original_question=q, used_llm=used_llm, metadata=self.meta_cache,ordered_steps=tree)
 
 def split_query_simple(user_query: str) -> Dict[str, Any]:
     splitter = QuestionSplitter()

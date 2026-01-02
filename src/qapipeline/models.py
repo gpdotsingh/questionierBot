@@ -7,6 +7,7 @@ from typing import List, Optional, Dict, Any
 class Plan:
     original_question: str
     used_llm: bool
+    metadata: Dict[str, Any]
     ordered_steps: Optional[Dict[str, Any]]
 
 @dataclass
