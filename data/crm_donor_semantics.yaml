@@ -56,7 +56,7 @@ dimensions:
       - name: two_letter_code
         type: regex
         pattern: "^[A-Z]{2}$"
-  zipcode:
+  zip_code:
     column: ZipCode
     type: string
     synonyms: ["zip", "postal code"]
@@ -68,7 +68,7 @@ dimensions:
     column: TotalGifts
     type: number
     synonyms: ["gift count", "gifts", "num gifts"]
-  amount:
+  total_amount_donated:
     column: TotalAmountDonated
     type: number
     currency: "USD"   # or EUR if you converted; keep consistent with data

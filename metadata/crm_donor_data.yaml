@@ -9,10 +9,10 @@ fields:
   phone: "Phone"
   city: "City"
   state: "State"
-  zipcode: "ZipCode"
+  zip_code: "ZipCode"
   last_donation_date: "LastDonationDate"
   total_gifts: "TotalGifts"
-  total_amount: "TotalAmountDonated"
+  total_amount_donated: "TotalAmountDonated"
   event_participation: "EventParticipation"
   engagement_score: "EngagementScore"
 meta:

@@ -1,6 +1,6 @@
 dataset:
   name: "CRM Donor Simulation"
-  granularity: "donor"  # donor | transaction
+  granularity: "donors"  # donor | transaction
 fields:
   donor_id: "DonorID"
   first_name: "FirstName"
@@ -9,10 +9,10 @@ fields:
   phone: "Phone"
   city: "City"
   state: "State"
-  zipcode: "ZipCode"
+  zip_code: "ZipCode"
   last_donation_date: "LastDonationDate"
   total_gifts: "TotalGifts"
-  total_amount: "TotalAmountDonated"
+  total_amount_donated: "TotalAmountDonated"
   event_participation: "EventParticipation"
   engagement_score: "EngagementScore"
 meta:

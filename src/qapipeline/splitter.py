@@ -2,12 +2,13 @@
 from __future__ import annotations
 import os, re, json, glob
 from typing import Dict, Any, List, Optional
+from .llm_common import LLMRouterBase, LLMJsonMixin
 from .models import Plan
-from .settings import get_provider_runtime, ensure_env_loaded
+from .settings import ensure_env_loaded
 
 ensure_env_loaded()
 
-# ---------- YAML metadata ----------
+# ---------- YAML metadata ----------∏
 try:
     import yaml
 except Exception:
@@ -23,10 +24,8 @@ except Exception:
 JOINERS = re.compile(r"\b(?:and|also|plus|as well as)\b", re.I)
 SEQUENCERS = re.compile(r"\b(?:then|next|after|based on|using|with|from)\b", re.I)
 SENT_SPLIT = re.compile(r"[.;?!]|\bthen\b", re.I)
-CLEAN_WS = re.compile(r"\s+")
-
 def _norm(s: str) -> str:
-    return CLEAN_WS.sub(" ", s or "").strip()
+    return LLMJsonMixin.norm(s)
 
 def _pack_nodes(nodes: List[Dict[str, Any]]) -> Dict[str, Any]:
     def pack(n: Dict[str, Any]) -> Dict[str, Any]:
@@ -36,14 +35,9 @@ def _pack_nodes(nodes: List[Dict[str, Any]]) -> Dict[str, Any]:
         out.update(pack(n))
     return out
 
-class _LLMRouter:
+class _LLMRouter(LLMRouterBase):
     def __init__(self) -> None:
-        runtime = get_provider_runtime("splitter")
-        self.provider = runtime.provider
-        self._openai = runtime.openai_client
-        self.openai_model = runtime.openai_model
-        self._ollama = runtime.ollama_client
-        self.ollama_model = runtime.ollama_model
+        super().__init__(runtime_name="splitter")
 
     @staticmethod
     def _prompt_header() -> str:
@@ -74,30 +68,7 @@ class _LLMRouter:
         )
 
 
-    def ask_json(self, prompt: str) -> Optional[dict]:
-        try:
-            if self._openai:
-                resp = self._openai.chat.completions.create(
-                    model=self.openai_model,
-                    messages=[{"role": "user", "content": prompt}],
-                    temperature=0.1,
-                )
-                text = resp.choices[0].message.content or ""
-            elif self._ollama:
-                resp = self._ollama.chat(
-                    model=self.ollama_model,
-                    messages=[{"role": "user", "content": prompt}],
-                    options={"temperature": 0.1},
-                )
-                text = (resp.get("message") or {}).get("content") or str(resp)
-            else:
-                return None
-            s, e = text.find("{"), text.rfind("}")
-            if s != -1 and e != -1 and e > s:
-                return json.loads(text[s:e+1])
-            return json.loads(text)
-        except Exception:
-            return None
+    # ask_json provided by LLMRouterBase
 
 def _load_metadata(dirs: Optional[List[str]] = None) -> Dict[str, Any]:
     dirs = dirs or ["metadata", "metadat"]
