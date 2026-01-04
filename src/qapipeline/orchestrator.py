@@ -109,8 +109,7 @@ class Orchestrator(LLMJsonMixin):
         print(generated_queries)
         cumulative = []
         results = self._execute_generated_queries(generated_queries)
-
-        return generated_queries
+        return results
     
     def _attempt_llm(self, user_query: str) -> Optional[Dict[str, Any]]:
         if not (self.try_llm and self.router and self.router.provider):
