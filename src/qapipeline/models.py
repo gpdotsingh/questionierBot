@@ -11,9 +11,13 @@ class Plan:
     ordered_steps: Optional[Dict[str, Any]]
 
 @dataclass
-class CompilerInput:
+class OrchestratorOutput:
     original_question: str
+    metadata: Dict[str, Any]
+    ordered_steps: Optional[Dict[str, Any]]
     answers: List[str]
+    queries: Dict[str, Any]
+    query_result: Dict[str, Any]
 
 @dataclass
 class CompilerOutput:

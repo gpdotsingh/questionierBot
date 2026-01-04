@@ -16,7 +16,7 @@ ensure_env_loaded()
 
 from qapipeline import (
     QuestionSplitter, Orchestrator, LLMCompiler, Validator,
-    CompilerInput, ValidatorInput
+    OrchestratorOutput, ValidatorInput
 )
 
 app = FastAPI(title="QA Pipeline Chat (Dummy Chain)", version="1.0")
@@ -50,17 +50,14 @@ def chat(req: ChatRequest) -> ChatResponse:
     # 2. Orchestrate (dummy executes each step)
     orch = Orchestrator(debug=True)
     answers = orch.run(plan)
-    trace.append(f"[ORCH] produced {len(answers)} interim answers")
+    trace.append(f"[ORCH] produced {len(answers.query_result)} interim answers")
 
     # 3. Compile
     compiler = LLMCompiler()
-    compiled = compiler.compile(CompilerInput(
-        original_question=plan.original_question,
-        answers=answers
-    ))
+    compiled = compiler.compile(answers)
     trace.append("[COMPILER] combined answers")
 
-    # 4. Validate
+    # 4. Validate   
     validator = Validator()
     verdict = validator.validate(ValidatorInput(
         original_question=plan.original_question,

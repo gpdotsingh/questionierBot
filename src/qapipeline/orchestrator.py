@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import Any, Dict, List, Optional
-from .models import Plan
+from .models import Plan , OrchestratorOutput
 from .settings import get_provider_runtime, ensure_env_loaded
 from .llm_common import LLMRouterBase, LLMJsonMixin
 import re
@@ -36,14 +36,24 @@ class _LLMRouter(LLMRouterBase):
             "  \"Q4\": {\"text\": \"...\", \"children\": []}\n"
             "}\n"
             "Rules:\n"
-
             "- Target table MUST be \"donors\".\n"
             "- Column names MUST be the snake_case of Metadata.fields KEYS (NOT their display values).\n"
             "  Examples:\n"
             "    donor_id -> column \"donor_id\"\n"
             "    first_name -> column \"first_name\"\n"
             "    total_amount_donated -> column \"total_amount_donated\"\n"
+            "Text functions (TRIM/LENGTH/LOWER/UPPER):\n"
+            "  - Apply only to text columns. Do NOT call TRIM/LENGTH on integer/numeric.\n"
+            "  - Cast non-text when needed: TRIM(CAST(\"zip_code\" AS text)), LENGTH(CAST(\"zip_code\" AS text)).\n"
+            "  - Example: (LENGTH(TRIM(\"city\")) > 0) AND (\"zip_code\" IS NULL OR LENGTH(TRIM(CAST(\"zip_code\" AS text))) = 0).\n"
+            "- Use proper PostgreSQL date arithmetic (intervals), not date + numeric."
+            "Boolean fields:\n"
+            "  - Never use empty string '' or numeric with COALESCE on boolean columns.\n"
+            "  - Use COALESCE(\"event_participation\", false) for null-safe boolean.\n"
+            "  - If a numeric flag is needed: CASE WHEN \"event_participation\" THEN 1 ELSE 0 END AS event_participation_int.\n"
+            "  - If a text label is needed: CASE WHEN \"event_participation\" THEN 'yes' ELSE 'no' END AS event_participation_label.\n"
             "- Resolve natural language using Metadata.synonyms mappings.\n"
+            "- Queries running on postgresql \n"
             "- Keep steps minimal and executable. If a step depends on a previous result, nest it as a child.\n"
             "- Include validation steps when an entity is referenced (e.g., check City/State exists).\n"
             "- Prefer a single root with children unless independent roots are clearly separate.\n"
@@ -98,7 +108,7 @@ class Orchestrator(LLMJsonMixin):
         self.faiss_dir = faiss_dir
         self.router = _LLMRouter() if try_llm else None
 
-    def run(self, plan: Plan) -> List[str]:
+    def run(self, plan: Plan) -> OrchestratorOutput:
         provider = self.provider
         self.provider = provider
         answers: List[str] = []
@@ -106,10 +116,18 @@ class Orchestrator(LLMJsonMixin):
         self.metadata = plan.metadata
         print(self.question )  # plain JSON without dict_values
         generated_queries = self._attempt_llm(self.question)
+
         print(generated_queries)
         cumulative = []
         results = self._execute_generated_queries(generated_queries)
-        return results
+        return  OrchestratorOutput(
+            original_question=plan.original_question,
+            metadata=plan.metadata,
+            ordered_steps=plan.ordered_steps,
+            answers=answers,
+            queries=generated_queries,
+            query_result=results
+        )
     
     def _attempt_llm(self, user_query: str) -> Optional[Dict[str, Any]]:
         if not (self.try_llm and self.router and self.router.provider):

@@ -1,4 +1,4 @@
-from .models import  Plan, CompilerInput, CompilerOutput, ValidatorInput, ValidatorOutput
+from .models import  Plan, OrchestratorOutput, CompilerOutput, ValidatorInput, ValidatorOutput
 from .splitter import QuestionSplitter, split_query_simple
 from .orchestrator import Orchestrator
 from .compiler import LLMCompiler
@@ -10,7 +10,7 @@ ensure_env_loaded()
 
 __all__ = [
     "Plan",
-    "CompilerInput","CompilerOutput",
+    "OrchestratorOutput","CompilerOutput",
     "ValidatorInput","ValidatorOutput",
     "LLMRouter","split_query_simple",
     "Orchestrator","LLMCompiler","Validator",
