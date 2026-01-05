@@ -28,8 +28,13 @@ class CompilerOutput:
 class ValidatorInput:
     original_question: str
     compiled_answer: str
+    plan: Optional[Plan] = None
+    orchestrator_output: Optional[OrchestratorOutput] = None
+    compiler_output: Optional[CompilerOutput] = None
 
 @dataclass
 class ValidatorOutput:
     score: float
     notes: Optional[str] = None
+    valid: bool = False
+    response_json: Optional[Dict[str, Any]] = None

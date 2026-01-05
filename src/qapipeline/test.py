@@ -5,44 +5,11 @@ import json
 from qapipeline.llm_common import LLMRouterBase
 from splitter import _LLMRouter
 from .models import OrchestratorOutput, CompilerOutput
-from .llm_common import LLMRouterBase, LLMJsonMixin
 
 
-def _norm(s: str) -> str:
-    return LLMJsonMixin.norm(s)
-    
 class _LLMRouter(LLMRouterBase):
     def __init__(self) -> None:
         super().__init__(runtime_name="ORCHESTRATOR")
-
-        # ---- Prompt builder ----
-    @staticmethod
-    def _prompt_header(self, output: OrchestratorOutput) -> str:
-        oq = (output.original_question or "").strip()
-        
-        return (
-            "You are a report compiler. Write a clear, concise,  to the OriginalQuestion.\n"
-            "Use Metadata to correctly name entities/fields and QueryResults as the factual basis.\n"
-            "Requirements:\n"
-            "- Be accurate and brief (3–8 sentences or short bullet points).\n"
-            "- Include key numbers, top entries (limit 3–5), and relevant filters (city/state/date ranges).\n"
-            "- If results are empty or contain errors, state that and suggest a correction.\n"
-            "- Plain text only. No code fences, no SQL, no JSON.\n\n"
-            f"OriginalQuestion:\n{oq}\n\n"
-                     "Now write the final answer:"
-            "Output human-readable answer in JSON format :"
-        )
-
-    @staticmethod
-    def _prompt_body(user_query: str, meta_text: str, hint_text: str = "") -> str:
-        block_meta = f"Metadata:\n{meta_text}\n" if meta_text else "Metadata:\n(none)\n"
-        block_hint = f"\nVectorHints:\n{hint_text}\n" if hint_text else ""
-        return (
-            f"{block_meta}"
-            f"UserQuery:\n\"{_norm(user_query)}\"\n"
-            f"{block_hint}\n"
-            "Output JSON now:"
-        )
 
 class LLMCompiler:
     def __init__(self, try_llm: bool = True, metadata: Optional[Dict[str, Any]] = None) -> None:
@@ -90,19 +57,39 @@ class LLMCompiler:
             return "\n".join(out)
         return str(vals)
 
+    # ---- Prompt builder ----
+    def _build_prompt(self, output: OrchestratorOutput) -> str:
+        oq = (output.original_question or "").strip()
+        meta_str = self._meta_to_text(output.metadata or {})
+        results_str = self._results_to_text(output.query_result or {})
+
+        return (
+            "You are a report compiler. Write a clear, concise, human-readable answer to the OriginalQuestion.\n"
+            "Use Metadata to correctly name entities/fields and QueryResults as the factual basis.\n"
+            "Requirements:\n"
+            "- Be accurate and brief (3–8 sentences or short bullet points).\n"
+            "- Include key numbers, top entries (limit 3–5), and relevant filters (city/state/date ranges).\n"
+            "- If results are empty or contain errors, state that and suggest a correction.\n"
+            "- Plain text only. No code fences, no SQL, no JSON.\n\n"
+            f"OriginalQuestion:\n{oq}\n\n"
+            f"Metadata:\n{meta_str}\n\n"
+            f"QueryResults:\n{results_str}\n\n"
+            "Now write the final answer:"
+            "Output JSON now:"
+        )
+
+    @staticmethod
+    def _prompt_body(user_query: str, meta_text: str, hint_text: str = "") -> str:
+              return (
+            "Output JSON now:"
+        )
     
     # ---- LLM attempt ----
     def _attempt_llm(self, output: OrchestratorOutput) -> Optional[str]:
         if not (self.try_llm and self.router and self.router.provider):
             return None
-        
-        meta = self._meta_to_text(output.metadata or {})
-        results = self._results_to_text(output.query_result or {})
-        body = _LLMRouter._prompt_body(output.original_question or "",meta, results)
-        header = _LLMRouter._prompt_header(self=self, output=output)
-        prompt = header + body
-        raw = self.router.ask_json(prompt)
-
+        prompt = self._prompt_header(output)
+        raw = self.router.ask_json(prompt)  # If router enforces JSON, adjust to ask text instead
         # If ask_json returns dict, try extracting a 'final' or join keys; else return None.
         if isinstance(raw, dict):
             # Prefer a 'final' key; otherwise join string values

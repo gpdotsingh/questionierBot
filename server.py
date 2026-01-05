@@ -1,7 +1,8 @@
 from __future__ import annotations
 import os, sys
 from pathlib import Path
-from typing import List, Optional
+import json
+from typing import Any, Dict, List, Optional
 from fastapi import FastAPI
 from pydantic import BaseModel
 
@@ -31,6 +32,32 @@ class ChatResponse(BaseModel):
     plan_steps: List[str]
     validation_score: Optional[float] = None
     chain_trace: List[str]
+    validated_response: Optional[Dict[str, Any]] = None
+
+
+def _sort_key(key: str) -> int:
+    if isinstance(key, str) and key.startswith("Q") and key[1:].isdigit():
+        return int(key[1:])
+    return 0
+
+
+def _flatten_plan_steps(ordered_steps: Optional[Dict[str, Any]]) -> List[str]:
+    if not isinstance(ordered_steps, dict):
+        return []
+    steps: List[str] = []
+
+    def walk(qid: str, node: Dict[str, Any]) -> None:
+        text = (node or {}).get("text") or ""
+        if text:
+            steps.append(f"{qid}: {text}")
+        for child in (node or {}).get("children", []):
+            if isinstance(child, dict):
+                for child_id, child_node in child.items():
+                    walk(str(child_id), child_node)
+
+    for k, v in sorted(ordered_steps.items(), key=lambda kv: _sort_key(kv[0])):
+        walk(str(k), v)
+    return steps
 
 @app.get("/health")
 def health():
@@ -45,7 +72,8 @@ def chat(req: ChatRequest) -> ChatResponse:
     # 1. Split question
     splitter = QuestionSplitter(try_llm=req.try_llm)
     plan = splitter.plan(req.message)
-    trace: List[str] = [f"[SPLITTER] steps={len(plan.ordered_steps)}"]
+    plan_steps = _flatten_plan_steps(plan.ordered_steps)
+    trace: List[str] = [f"[SPLITTER] steps={len(plan_steps)}"]
 
     # 2. Orchestrate (dummy executes each step)
     orch = Orchestrator(debug=True)
@@ -61,14 +89,20 @@ def chat(req: ChatRequest) -> ChatResponse:
     validator = Validator()
     verdict = validator.validate(ValidatorInput(
         original_question=plan.original_question,
-        compiled_answer=compiled.final_answer
+        compiled_answer=compiled.final_answer,
+        plan=plan,
+        orchestrator_output=answers,
+        compiler_output=compiled,
     ))
     trace.append(f"[VALIDATOR] score={verdict.score:.3f}")
 
+    final_answer = json.dumps(verdict.response_json) if verdict.response_json else compiled.final_answer
+
     return ChatResponse(
-        answer=compiled.final_answer,
+        answer=final_answer,
         used_llm_in_splitter=plan.used_llm,
-        plan_steps=[f"{s.id}: {s.text}" for s in plan.ordered_steps],
+        plan_steps=plan_steps,
         validation_score=verdict.score,
         chain_trace=trace,
+        validated_response=verdict.response_json,
     )

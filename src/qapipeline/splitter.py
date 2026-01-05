@@ -1,7 +1,7 @@
 # filepath: questionierBot/src/qapipeline/splitter.py
 from __future__ import annotations
 import os, re, json, glob
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Tuple
 from .llm_common import LLMRouterBase, LLMJsonMixin
 from .models import Plan
 from .settings import ensure_env_loaded
@@ -211,19 +211,25 @@ class QuestionSplitter:
         self.meta_cache = _load_metadata(self.metadata_dirs)
         self.meta_text = _metadata_text(self.meta_cache)
 
-    def _attempt_llm(self, user_query: str) -> Optional[Dict[str, Any]]:
+    def _attempt_llm(self, user_query: str, hint_text: str = "") -> Optional[Dict[str, Any]]:
         if not (self.try_llm and self.router and self.router.provider):
             return None
-        prompt = _LLMRouter._prompt_header() + "\n" + _LLMRouter._prompt_body(user_query, self.meta_text)
+        prompt = _LLMRouter._prompt_header() + "\n" + _LLMRouter._prompt_body(
+            user_query, self.meta_text, hint_text=hint_text
+        )
         raw = self.router.ask_json(prompt)
         if isinstance(raw, dict):
             try:
                 return _number_from_llm_dict(raw)
             except Exception:
                 pass
-        hints = " ".join(self._vector_terms(user_query))
-        if hints:
-            prompt2 = _LLMRouter._prompt_header() + "\n" + _LLMRouter._prompt_body(user_query, self.meta_text, hint_text=hints)
+
+        # Retry with vector-derived hints if not already provided
+        vector_hints = " ".join(self._vector_terms(user_query))
+        if vector_hints and vector_hints != hint_text:
+            prompt2 = _LLMRouter._prompt_header() + "\n" + _LLMRouter._prompt_body(
+                user_query, self.meta_text, hint_text=vector_hints
+            )
             raw2 = self.router.ask_json(prompt2)
             if isinstance(raw2, dict):
                 try:
@@ -234,6 +240,38 @@ class QuestionSplitter:
 
     def _vector_terms(self, query: str) -> List[str]:
         return _vector_terms(query, top_k=8, faiss_dir=self.faiss_dir)
+
+    def _semantic_context(self, query: str, top_k: int = 5) -> Tuple[str, List[str]]:
+        """
+        Query the vector store to surface related snippets and column names that map to the question.
+        """
+        if FaissVectorStoreCosine is None:
+            return "", []
+        try:
+            store = FaissVectorStoreCosine(persist_dir=self.faiss_dir)
+            store.load()
+            hits = store.query(query, k=top_k) or []
+        except Exception:
+            return "", []
+
+        field_keys = set((self.meta_cache.get("fields") or {}).keys())
+        columns = set()
+        snippets: List[str] = []
+        for h in hits:
+            md = (h.get("metadata") or {})
+            if not isinstance(md, dict):
+                continue
+            for k, v in md.items():
+                if k in field_keys and v:
+                    columns.add(k)
+            txt = md.get("text")
+            if isinstance(txt, str) and txt.strip():
+                snippets.append(txt.strip())
+
+        context = " ".join(snippets).strip()
+        if len(context) > 400:
+            context = context[:400] + "..."
+        return context, sorted(columns)
 
     def _fallback_tree(self, query: str) -> Dict[str, Any]:
         augmented = query
@@ -246,10 +284,21 @@ class QuestionSplitter:
 
     def plan(self, question: str) -> Plan:
         q = _norm(question)
-        tree = self._attempt_llm(q)
+        context_snippet, columns = self._semantic_context(q)
+
+        hint_parts: List[str] = []
+        if columns:
+            hint_parts.append(f"Columns: {', '.join(columns)}")
+        if context_snippet:
+            hint_parts.append(f"Context: {context_snippet}")
+        hint_text = " | ".join(hint_parts)
+
+        augmented_query = f"{q} | {hint_text}" if hint_text else q
+
+        tree = self._attempt_llm(augmented_query, hint_text=hint_text)
         used_llm = tree is not None
         if tree is None:
-            tree = self._fallback_tree(q)
+            tree = self._fallback_tree(augmented_query)
         return Plan(original_question=q, used_llm=used_llm, metadata=self.meta_cache,ordered_steps=tree)
 
 def split_query_simple(user_query: str) -> Dict[str, Any]:

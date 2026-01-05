@@ -37,7 +37,8 @@ class LLMJsonMixin:
             if s != -1 and e != -1 and e > s:
                 return json.loads(text[s:e + 1])
             return json.loads(text)
-        except Exception:
+        except Exception as e:
+            print(f"ERROR: {e}")
             return None
 
 
