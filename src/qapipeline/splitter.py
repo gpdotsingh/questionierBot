@@ -57,11 +57,13 @@ class _LLMRouter(LLMRouterBase):
         )
 
     @staticmethod
-    def _prompt_body(user_query: str, meta_text: str, hint_text: str = "") -> str:
+    def _prompt_body(user_query: str, meta_text: str, hint_text: str = "", memory_text: str = "") -> str:
         block_meta = f"Metadata:\n{meta_text}\n" if meta_text else "Metadata:\n(none)\n"
         block_hint = f"\nVectorHints:\n{hint_text}\n" if hint_text else ""
+        block_mem = f"\nConversationMemory:\n{memory_text}\n" if memory_text else ""
         return (
             f"{block_meta}"
+            f"{block_mem}"
             f"UserQuery:\n\"{_norm(user_query)}\"\n"
             f"{block_hint}\n"
             "Output JSON now:"
@@ -282,7 +284,7 @@ class QuestionSplitter:
         return _rule_based_tree(augmented)
 
 
-    def plan(self, question: str) -> Plan:
+    def plan(self, question: str, memory_text: str = "") -> Plan:
         q = _norm(question)
         context_snippet, columns = self._semantic_context(q)
 
@@ -295,14 +297,62 @@ class QuestionSplitter:
 
         augmented_query = f"{q} | {hint_text}" if hint_text else q
 
-        tree = self._attempt_llm(augmented_query, hint_text=hint_text)
+        tree = self._attempt_llm(augmented_query, hint_text=hint_text, memory_text=memory_text)
         used_llm = tree is not None
         if tree is None:
             tree = self._fallback_tree(augmented_query)
-        return Plan(original_question=q, used_llm=used_llm, metadata=self.meta_cache,ordered_steps=tree)
+        return Plan(original_question=q, used_llm=used_llm, metadata=self.meta_cache, ordered_steps=tree)
 
-def split_query_simple(user_query: str) -> Dict[str, Any]:
+    def _attempt_llm(self, user_query: str, hint_text: str = "", memory_text: str = "") -> Optional[Dict[str, Any]]:
+        if not (self.try_llm and self.router and self.router.provider):
+            return None
+        meta_text = self._meta_to_text(self.meta_cache or {})
+        prompt = _LLMRouter._prompt_header() + "\n" + _LLMRouter._prompt_body(
+            user_query, meta_text, hint_text=hint_text, memory_text=memory_text
+        )
+        return self.router.ask_json(prompt)
+   # ---- Formatting helpers ----
+    def _meta_to_text(self, md: Dict[str, Any]) -> str:
+        if not md:
+            return "(none)"
+        lines = []
+        ds = md.get("dataset") or {}
+        fields = md.get("fields") or {}
+        syn = md.get("synonyms") or {}
+        if ds:
+            lines.append("Dataset:")
+            for k, v in ds.items():
+                lines.append(f"- {k}: {v}")
+        if fields:
+            lines.append("Fields:")
+            for k, v in fields.items():
+                lines.append(f"- {k}: {v}")
+        if syn:
+            lines.append("Synonyms:")
+            for k, v in syn.items():
+                vv = ", ".join(map(str, v)) if isinstance(v, list) else str(v)
+                lines.append(f"- {k}: {vv}")
+        return "\n".join(lines)
+
+def split_query_simple(user_query: str, memory_text: str = "") -> Dict[str, Any]:
     splitter = QuestionSplitter()
-    tree = splitter._attempt_llm(user_query) or splitter._fallback_tree(user_query)
-    print( json.dumps(tree, indent=2) )
+    router = _LLMRouter()  # initialize local router
+    meta_text = splitter._meta_to_text(splitter.meta_cache or {})
+    # First attempt
+    llm_raw = None
+    if router.provider:
+        prompt = _LLMRouter._prompt_header() + "\n" + _LLMRouter._prompt_body(
+            user_query, meta_text, memory_text=memory_text
+        )
+        llm_raw = router.ask_json(prompt)
+        # Optional second attempt with vector hints
+        hints = " ".join(_vector_terms(user_query, top_k=8))
+        if not llm_raw and hints:
+            prompt2 = _LLMRouter._prompt_header() + "\n" + _LLMRouter._prompt_body(
+                user_query, meta_text, hint_text=hints, memory_text=memory_text
+            )
+            llm_raw = router.ask_json(prompt2)
+
+    tree = llm_raw if isinstance(llm_raw, dict) else splitter._fallback_tree(user_query)
+    print(json.dumps(tree, indent=2))
     return tree

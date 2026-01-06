@@ -76,11 +76,13 @@ class _LLMRouter(LLMRouterBase):
         )
 
     @staticmethod
-    def _prompt_body(user_query: str, meta_text: str, hint_text: str = "") -> str:
+    def _prompt_body(user_query: str, meta_text: str, hint_text: str = "", memory_text: str = "") -> str:
         block_meta = f"Metadata:\n{meta_text}\n" if meta_text else "Metadata:\n(none)\n"
         block_hint = f"\nVectorHints:\n{hint_text}\n" if hint_text else ""
+        block_mem = f"\nConversationMemory:\n{memory_text}\n" if memory_text else ""
         return (
             f"{block_meta}"
+            f"{block_mem}"
             f"UserQuery:\n\"{_norm(user_query)}\"\n"
             f"{block_hint}\n"
             "Output JSON now:"
@@ -116,14 +118,14 @@ class Orchestrator(LLMJsonMixin):
         self.faiss_dir = faiss_dir
         self.router = _LLMRouter() if try_llm else None
 
-    def run(self, plan: Plan) -> OrchestratorOutput:
+    def run(self, plan: Plan, memory_text: str = "") -> OrchestratorOutput:
         provider = self.provider
         self.provider = provider
         answers: List[str] = []
         self.question = json.dumps(plan.ordered_steps, indent=2)
         self.metadata = plan.metadata
         print(self.question )  # plain JSON without dict_values
-        generated_queries = self._attempt_llm(self.question)
+        generated_queries = self._attempt_llm(self.question, memory_text=memory_text)
 
         print(generated_queries)
         cumulative = []
@@ -137,12 +139,11 @@ class Orchestrator(LLMJsonMixin):
             query_result=results
         )
     
-    def _attempt_llm(self, user_query: str) -> Optional[Dict[str, Any]]:
+    def _attempt_llm(self, user_query: str, memory_text: str = "") -> Optional[Dict[str, Any]]:
         if not (self.try_llm and self.router and self.router.provider):
             return None
-        prompt = _LLMRouter._prompt_header() + "\n" + _LLMRouter._prompt_body(user_query, self.metadata)
-        raw = self.router.ask_json(prompt)
-        return raw
+        prompt = _LLMRouter._prompt_header() + "\n" + _LLMRouter._prompt_body(user_query, self.metadata, memory_text=memory_text)
+        return self.router.ask_json(prompt)
 
     def _pg_connect(self):
         """

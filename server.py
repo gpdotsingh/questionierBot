@@ -5,6 +5,9 @@ import json
 from typing import Any, Dict, List, Optional
 from fastapi import FastAPI
 from pydantic import BaseModel
+from collections import deque
+from typing import Deque, Tuple
+SESSIONS: Dict[str, Deque[Tuple[str, str]]] = {}
 
 # Make src importable
 HERE = Path(__file__).resolve().parent
@@ -25,6 +28,8 @@ app = FastAPI(title="QA Pipeline Chat (Dummy Chain)", version="1.0")
 class ChatRequest(BaseModel):
     message: str
     try_llm: bool = True  # splitter may ignore if no LLM configured
+    session_id: str = "default"  # NEW
+
 
 class ChatResponse(BaseModel):
     used_llm_in_splitter: bool
@@ -68,15 +73,20 @@ def health():
 
 @app.post("/chat", response_model=ChatResponse)
 def chat(req: ChatRequest) -> ChatResponse:
+    sid = req.session_id
+    history = SESSIONS.setdefault(sid, deque(maxlen=10))
+    history.append(("user", req.message))
+    memory_ctx = "\n".join(f"{role.upper()}: {content}" for role, content in history)
+
     # 1. Split question
     splitter = QuestionSplitter(try_llm=req.try_llm)
-    plan = splitter.plan(req.message)
+    plan = splitter.plan(req.message, memory_text=memory_ctx)  # NEW: pass memory
     plan_steps = _flatten_plan_steps(plan.ordered_steps)
     trace: List[str] = [f"[SPLITTER] steps={len(plan_steps)}"]
 
     # 2. Orchestrate (dummy executes each step)
     orch = Orchestrator(debug=True)
-    answers = orch.run(plan)
+    answers = orch.run(plan, memory_text=memory_ctx)  # NEW: pass memory
     trace.append(f"[ORCH] produced {len(answers.query_result)} interim answers")
 
     # 3. Compile
