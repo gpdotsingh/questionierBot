@@ -27,7 +27,6 @@ class ChatRequest(BaseModel):
     try_llm: bool = True  # splitter may ignore if no LLM configured
 
 class ChatResponse(BaseModel):
-    answer: str
     used_llm_in_splitter: bool
     plan_steps: List[str]
     validation_score: Optional[float] = None
@@ -99,7 +98,6 @@ def chat(req: ChatRequest) -> ChatResponse:
     final_answer = json.dumps(verdict.response_json) if verdict.response_json else compiled.final_answer
 
     return ChatResponse(
-        answer=final_answer,
         used_llm_in_splitter=plan.used_llm,
         plan_steps=plan_steps,
         validation_score=verdict.score,
