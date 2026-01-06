@@ -8,7 +8,7 @@ vector_store_v3/
 faiss_store/
 vectors/.chroma/
 .DS_Store
-
+echo ".env" >> .gitignore
 # Ignore all .history folders anywhere (VS Code Local History, etc.)
 **/.history/
 **/.vscode/.history/
