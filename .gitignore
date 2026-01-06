@@ -1,4 +1,3 @@
-# ...existing code...
 .env
 .history/
 *.sqlite3
@@ -9,6 +8,5 @@ faiss_store/
 vectors/.chroma/
 .DS_Store
 echo ".env" >> .gitignore
-# Ignore all .history folders anywhere (VS Code Local History, etc.)
 **/.history/
-**/.vscode/.history/
+**/.vscode/.history/.env git rm --cached .env git commit -m chore: stop tracking .env
