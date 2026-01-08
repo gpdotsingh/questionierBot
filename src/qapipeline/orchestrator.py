@@ -125,18 +125,30 @@ class Orchestrator(LLMJsonMixin):
         self.question = json.dumps(plan.ordered_steps, indent=2)
         self.metadata = plan.metadata
         print(self.question )  # plain JSON without dict_values
-        generated_queries = self._attempt_llm(self.question, memory_text=memory_text)
+        max_attempts = 3
+        generated_queries: Optional[Dict[str, Any]] = None
+        results_list: List[str] = []
+        for attempt in range(1, max_attempts + 1):
+            if generated_queries is None:
+                generated_queries = self._attempt_llm(self.question, memory_text=memory_text)
+            results_list = self._execute_generated_queries(generated_queries)
+            # Check for any errors
+            has_error = any(isinstance(r, str) and r.startswith("ERROR:") for r in results_list)
+            if not has_error:
+                break
+            # Regenerate queries for next attempt
+            generated_queries = self._attempt_llm(
+                f"{self.question} | Fix previous SQL errors and correct types/aggregations.",
+                memory_text=memory_text
+            )
 
-        print(generated_queries)
-        cumulative = []
-        results = self._execute_generated_queries(generated_queries)
         return  OrchestratorOutput(
             original_question=plan.original_question,
             metadata=plan.metadata,
             ordered_steps=plan.ordered_steps,
             answers=answers,
             queries=generated_queries,
-            query_result=results
+            query_result=results_list
         )
     
     def _attempt_llm(self, user_query: str, memory_text: str = "") -> Optional[Dict[str, Any]]:
@@ -212,7 +224,8 @@ class Orchestrator(LLMJsonMixin):
                         else:
                             results.append(f"OK rows={cur.rowcount}")
                     except Exception as e:
-                        results.append(f"ERROR: {e}")
+                        results.append(f"ERROR: {e}\nSQL: {sql}")
+
         finally:
             if conn:
                 try:

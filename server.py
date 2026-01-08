@@ -7,6 +7,8 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from collections import deque
 from typing import Deque, Tuple
+from fastapi.middleware.cors import CORSMiddleware
+
 SESSIONS: Dict[str, Deque[Tuple[str, str]]] = {}
 
 # Make src importable
@@ -24,6 +26,15 @@ from qapipeline import (
 )
 
 app = FastAPI(title="QA Pipeline Chat (Dummy Chain)", version="1.0")
+
+# CORS (allow frontend to call /chat with preflight)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "*"],  # tighten in prod
+    allow_credentials=True,
+    allow_methods=["*"],   # includes OPTIONS
+    allow_headers=["*"],
+)
 
 class ChatRequest(BaseModel):
     message: str

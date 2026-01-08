@@ -61,3 +61,6 @@ CRM_2026 pwd
 
 Server admin login
 chatbotforservice
+
+(.venv) (base) gauravsingh@Gauravs-MacBook-Pro questionierBot % echo "$VIRTUAL_ENV"
+/Users/gauravsingh/study/AI/DeependraBhaiyaproject/questionierBot/.venv
