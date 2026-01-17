@@ -22,7 +22,7 @@ ensure_env_loaded()
 
 from qapipeline import (
     QuestionSplitter, Orchestrator, LLMCompiler, Validator,
-    OrchestratorOutput, ValidatorInput
+    ValidatorInput
 )
 
 app = FastAPI(title="QA Pipeline Chat (Dummy Chain)", version="1.0")
@@ -30,9 +30,12 @@ app = FastAPI(title="QA Pipeline Chat (Dummy Chain)", version="1.0")
 # CORS (allow frontend to call /chat with preflight)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "*"],  # tighten in prod
-    allow_credentials=True,
-    allow_methods=["*"],   # includes OPTIONS
+    allow_origins=[
+        "http://localhost:5173",  # Vite dev server
+        "http://127.0.0.1:5173"
+    ],
+    allow_credentials=False,
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
@@ -73,6 +76,42 @@ def _flatten_plan_steps(ordered_steps: Optional[Dict[str, Any]]) -> List[str]:
     for k, v in sorted(ordered_steps.items(), key=lambda kv: _sort_key(kv[0])):
         walk(str(k), v)
     return steps
+
+
+def _truncate_words(text: Any, max_words: int = 1000) -> Any:
+    if not isinstance(text, str):
+        return text
+    words = text.split()
+    if len(words) <= max_words:
+        return text
+    return " ".join(words[:max_words]) + " ... [truncated]"
+
+
+def _truncate_value(val: Any, max_words: int = 1000) -> Any:
+    if isinstance(val, list):
+        return [_truncate_value(v, max_words) for v in val]
+    if isinstance(val, dict):
+        return {k: _truncate_value(v, max_words) for k, v in val.items()}
+    return _truncate_words(val, max_words)
+
+
+def _truncate_response_json(data: Any, max_words: int = 1000) -> Any:
+    if not isinstance(data, dict):
+        return data
+    truncated = dict(data)
+    citations = []
+    for cite in data.get("citations", []):
+        if isinstance(cite, dict):
+            citations.append({
+                **cite,
+                "query": _truncate_words(cite.get("query"), max_words),
+                "output": _truncate_value(cite.get("output"), max_words),
+            })
+        else:
+            citations.append(cite)
+    truncated["citations"] = citations
+    return truncated
+
 
 @app.get("/health")
 def health():
@@ -116,12 +155,13 @@ def chat(req: ChatRequest) -> ChatResponse:
     ))
     trace.append(f"[VALIDATOR] score={verdict.score:.3f}")
 
-    final_answer = json.dumps(verdict.response_json) if verdict.response_json else compiled.final_answer
+    truncated_response = _truncate_response_json(verdict.response_json, max_words=1000)
+    final_answer = json.dumps(truncated_response) if truncated_response else compiled.final_answer
 
     return ChatResponse(
         used_llm_in_splitter=plan.used_llm,
         plan_steps=plan_steps,
         validation_score=verdict.score,
         chain_trace=trace,
-        validated_response=verdict.response_json,
+        validated_response=truncated_response,
     )
