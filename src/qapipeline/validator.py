@@ -71,7 +71,7 @@ class Validator:
         def walk(qid: str, node: Dict[str, Any]) -> None:
             text = (node or {}).get("text") or ""
             if text:
-                queries.append(text.strip())
+                queries.append(text)
             for child in (node or {}).get("children", []):
                 if isinstance(child, dict):
                     for child_id, child_node in child.items():

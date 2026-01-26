@@ -26,6 +26,7 @@ dependencies = [
   "nltk",
   "spacy",
   "jq>=1.10.0",
+  "pymongo>=4.16.0",
 ]
 
 [tool.uv]

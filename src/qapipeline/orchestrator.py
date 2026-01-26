@@ -5,8 +5,7 @@ from .settings import get_provider_runtime, ensure_env_loaded
 from .llm_common import LLMRouterBase, LLMJsonMixin
 import re
 import json
-import psycopg2
-import psycopg2.extras
+from pymongo import MongoClient
 import os
 from decimal import Decimal
 from datetime import date, datetime, time
@@ -29,50 +28,19 @@ class _LLMRouter(LLMRouterBase):
     @staticmethod
     def _prompt_header() -> str:
         return (
-            "You are a query planner for a SQL database. Use the provided Metadata to ground all fields.\n"
-            "Output ONLY raw JSON (no backticks, no prose) in this exact shape:\n"
+            "You are a query planner for MongoDB using aggregation pipelines. Use Metadata to ground fields.\n"
+            "Output ONLY raw JSON (no backticks, no prose) shaped like:\n"
             "{\n"
-            "  \"Q1\": {\"text\": \"...\", \"children\": [ {\"Q2\": {\"text\": \"...\", \"children\": []}}, {\"Q3\": {\"text\": \"...\", \"children\": []}} ]},\n"
-            "  \"Q4\": {\"text\": \"...\", \"children\": []}\n"
+            "  \"Q1\": {\"text\": [ {\"$match\": {...}}, {\"$group\": {...}} ], \"children\": [ {\"Q2\": {\"text\": [ {\"$match\": {...}} ], \"children\": []}} ]},\n"
+            "  \"Q3\": {\"text\": [ {\"$match\": {...}}, {\"$sort\": {...}} ], \"children\": []}\n"
             "}\n"
             "Rules:\n"
-            "- Target table MUST be \"donors\".\n"
-            "- Column names MUST be the snake_case of Metadata.fields KEYS (NOT their display values).\n"
-            "  Examples:\n"
-            "    donor_id -> column \"donor_id\"\n"
-            "    first_name -> column \"first_name\"\n"
-            "    total_amount_donated -> column \"total_amount_donated\"\n"
-              "Date arithmetic and EXTRACT (PostgreSQL):\n"
-            "  - Days since date: (current_date - \"last_donation_date\"::date) AS recency_days (integer).\n"
-            "  - EXTRACT is ONLY valid on timestamp or interval; NEVER call EXTRACT on integers.\n"
-            "  - If EXTRACT(day) is needed, use an interval: EXTRACT(day FROM age(current_date, \"last_donation_date\"::date)).\n"
-            "  - Buckets: date_trunc('month', \"last_donation_date\"::timestamp) AS month; GROUP BY month.\n"
-            "  - Add/subtract durations with intervals: current_date - interval '30 days'.\n"
-            "  - Cast explicitly when needed: \"last_donation_date\"::date or ::timestamp.\n"
-            
-            "Text functions (TRIM/LENGTH/LOWER/UPPER):\n"
-            "  - Apply only to text columns. Do NOT call TRIM/LENGTH on integer/numeric.\n"
-            "  - Cast non-text when needed: TRIM(CAST(\"zip_code\" AS text)), LENGTH(CAST(\"zip_code\" AS text)).\n"
-            "  - Example: (LENGTH(TRIM(\"city\")) > 0) AND (\"zip_code\" IS NULL OR LENGTH(TRIM(CAST(\"zip_code\" AS text))) = 0).\n"
-            "- Use proper PostgreSQL date arithmetic (intervals), not date + numeric."
-            "Boolean fields:\n"
-            "  - Never use empty string '' or numeric with COALESCE on boolean columns.\n"
-            "  - Use COALESCE(\"event_participation\", false) for null-safe boolean.\n"
-            "  - If a numeric flag is needed: CASE WHEN \"event_participation\" THEN 1 ELSE 0 END AS event_participation_int.\n"
-            "  - If a text label is needed: CASE WHEN \"event_participation\" THEN 'yes' ELSE 'no' END AS event_participation_label.\n"
-            "- Resolve natural language using Metadata.synonyms mappings.\n"
-            "- Keep steps minimal and executable. If a step depends on a previous result, nest it as a child.\n"
-            "- Include validation steps when an entity is referenced (e.g., check City/State exists).\n"
-            "- Prefer a single root with children unless independent roots are clearly separate.\n"
-            "- Return sequesnce of queries if required \n"
-            "- If multiple queries can be combined in one query then combine one all in single query \n"
-            "- Do not include commentary or code fences. Keys must be Q1..Qn only.\n"
-            "\n"
-            "After this header you will receive:\n"
-            
-            "- Metadata (YAML)\n"
-            "- UserQuestion\n"
-            "Then emit the JSON now."
+            "- Target collection: donors \n"
+            "- Each node's \"text\" must be a Mongo pipeline array; may also accept {\"pipeline\": [...]}.\n"
+            "- Keep steps minimal and nest dependents as children.\n"
+            "- Resolve natural language via Metadata.synonyms when mapping to fields.\n"
+            "- No commentary, no code fences. Keys must be Q1..Qn only."
+            "- Example { 'FirstName': { '$regex': 'an', '$options': 'i' } }"
         )
 
     @staticmethod
@@ -88,7 +56,7 @@ class _LLMRouter(LLMRouterBase):
             "Output JSON now:"
         )
 
-    # ask_json provided by LLMRouterBase
+
 
 class Orchestrator(LLMJsonMixin):
     """
@@ -136,9 +104,12 @@ class Orchestrator(LLMJsonMixin):
             has_error = any(isinstance(r, str) and r.startswith("ERROR:") for r in results_list)
             if not has_error:
                 break
+            error_texts = "\n".join(
+                r for r in results_list if isinstance(r, str) and r.startswith("ERROR:")
+            )
             # Regenerate queries for next attempt
             generated_queries = self._attempt_llm(
-                f"{self.question} | Fix previous SQL errors and correct types/aggregations.",
+                f"{self.question}\nPrevious errors:\n{error_texts}\nFix previous Mongo pipeline errors (stage order, field names, types).",
                 memory_text=memory_text
             )
 
@@ -157,38 +128,44 @@ class Orchestrator(LLMJsonMixin):
         prompt = _LLMRouter._prompt_header() + "\n" + _LLMRouter._prompt_body(user_query, self.metadata, memory_text=memory_text)
         return self.router.ask_json(prompt)
 
-    def _pg_connect(self):
-        """
-        Create a Postgres connection using .env values.
-        """
-        conn = psycopg2.connect(
-            host=os.getenv("PG_HOST", "127.0.0.1"),
-            port=os.getenv("PG_PORT", "5432"),
-            user=os.getenv("PG_USER", "postgres"),
-            password=os.getenv("PG_PASSWORD", ""),
-            dbname=os.getenv("PG_DATABASE", "postgres"),
-            sslmode=os.getenv("PG_SSLMODE", "disable"),
-        )
-        return conn
+    def _mongo_connect(self):
+        uri = os.getenv("MONGO_URI")
+        dbname = os.getenv("MONGO_DB", "chatbot")
+        collname = os.getenv("MONGO_COLLECTION", "donors")
+        client = MongoClient(uri)
+        return client, client[dbname][collname]
 
-    def _extract_sql_list(self, tree: Dict[str, Any]) -> List[str]:
-        """
-        Traverse the generated_queries tree and return a list of SQL texts in sequence (DFS).
-        Accepts format:
-          { "Q1": {"text": "...", "children": [ {"Q2": {...}}, {"Q3": {...}} ] }, "Q4": {...} }
-        """
-        sqls: List[str] = []
-        def walk(node_val: Dict[str, Any]):
-            txt = (node_val or {}).get("text", "")
-            if isinstance(txt, str) and txt.strip():
-                sqls.append(txt.strip())
-            for child in (node_val or {}).get("children", []):
-                for _, cv in child.items():
-                    walk(cv)
-        # sort roots by Q index
-        for k, v in sorted(tree.items(), key=lambda kv: int(kv[0][1:]) if kv[0].startswith("Q") and kv[0][1:].isdigit() else 0):
+    @staticmethod
+    def _coerce_pipeline(val: Any) -> Optional[List[Dict[str, Any]]]:
+        if isinstance(val, list) and val and isinstance(val[0], dict):
+            return val
+        if isinstance(val, str):
+            try:
+                parsed = json.loads(val)
+                if isinstance(parsed, list) and parsed and isinstance(parsed[0], dict):
+                    return parsed
+            except Exception:
+                return None
+        return None
+    
+    def _extract_pipeline_list(self, tree: Dict[str, Any]) -> List[List[Dict[str, Any]]]:
+        pipelines: List[List[Dict[str, Any]]] = []
+        def walk(node: Any) -> None:
+            if not isinstance(node, dict):
+                return
+            p = self._coerce_pipeline(node.get("text")) or self._coerce_pipeline(node.get("pipeline"))
+            if p:
+                pipelines.append(p)
+            for child in node.get("children") or []:
+                if isinstance(child, dict):
+                    for _, cv in child.items():
+                        walk(cv)
+        for _, v in sorted(
+            (tree or {}).items(),
+            key=lambda kv: int(kv[0][1:]) if isinstance(kv[0], str) and kv[0].startswith("Q") and kv[0][1:].isdigit() else 0
+        ):
             walk(v)
-        return sqls 
+        return pipelines
 
     @staticmethod
     def _json_default(o):
@@ -200,37 +177,32 @@ class Orchestrator(LLMJsonMixin):
 
     def _execute_generated_queries(self, generated_queries: Optional[Dict[str, Any]]) -> List[str]:
         """
-        Execute each SQL query (in order) against Postgres and return stringified results.
+        Execute each MongoDB aggregation pipeline (in order) and return stringified results.
         If generated_queries is None or empty, returns [].
         """
+        print("Generated Queries:", generated_queries)      
         if not isinstance(generated_queries, dict) or not generated_queries:
             return []
-        sqls = self._extract_sql_list(generated_queries)
-        if not sqls:
+        pipelines = self._extract_pipeline_list(generated_queries)
+        if not pipelines:
             return []
 
         results: List[str] = []
-        conn = None
+        client = None
         try:
-            conn = self._pg_connect()
-            with conn, conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-                for sql in sqls:
-                    try:
-                        cur.execute(sql)
-                        # If SELECT, fetch rows; else return rowcount/command status
-                        if cur.description:
-                            rows = cur.fetchall()
-                            results.append(json.dumps(rows, default=self._json_default))
-                        else:
-                            results.append(f"OK rows={cur.rowcount}")
-                    except Exception as e:
-                        results.append(f"ERROR: {e}\nSQL: {sql}")
-
-        finally:
-            if conn:
+            client, coll = self._mongo_connect()
+            for pipe in pipelines:
                 try:
-                    conn.close()
+                    cur = coll.aggregate(pipe)
+                    rows = list(cur)
+                    results.append(json.dumps(rows, default=self._json_default))
+                except Exception as e:
+                    results.append(f"ERROR: {e}\nPIPELINE: {json.dumps(pipe)[:1000]}")
+        finally:
+            if client:
+                try:
+                    client.close()
                 except Exception:
                     pass
         return results
-    # ask_json provided by LLMJsonMixin
+    

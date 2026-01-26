@@ -64,3 +64,11 @@ chatbotforservice
 
 (.venv) (base) gauravsingh@Gauravs-MacBook-Pro questionierBot % echo "$VIRTUAL_ENV"
 /Users/gauravsingh/study/AI/DeependraBhaiyaproject/questionierBot/.venv
+
+
+
+docker
+
+docker build -t questionier-bot .
+
+docker run --rm -p 8000:8000 --env-file .env -v "$(pwd)/data:/app/data" -v "$(pwd)/faiss_store:/app/faiss_store" questionier-bot
