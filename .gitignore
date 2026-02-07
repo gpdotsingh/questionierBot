@@ -11,3 +11,5 @@ echo ".env" >> .gitignore
 **/.history/
 **/.vscode/.history/.env git rm --cached .env git commit -m chore: stop tracking .env.env echo .env.docker git rm --cached .env
 .env echo .env.docker git rm --cached .env
+.env.docker
+.env*
