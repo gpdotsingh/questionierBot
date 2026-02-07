@@ -6,7 +6,6 @@ from qapipeline.llm_common import LLMRouterBase
 from splitter import _LLMRouter
 from .models import OrchestratorOutput, CompilerOutput
 
-
 class _LLMRouter(LLMRouterBase):
     def __init__(self) -> None:
         super().__init__(runtime_name="ORCHESTRATOR")
