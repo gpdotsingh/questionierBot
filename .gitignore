@@ -13,3 +13,5 @@ echo ".env" >> .gitignore
 .env echo .env.docker git rm --cached .env
 .env.docker
 .env*
+.env.docker
+.env*
