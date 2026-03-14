@@ -1,0 +1,802 @@
+dataset:
+  name: "QuickBooks Online"
+  granularity: "entity"          # multi-entity accounting dataset
+  mode: "transactional"          # transaction-level data from REST API
+  source: "quickbooks_api"       # data fetched via QuickBooks IDS Query API
+  source_endpoint: "/api/query"   # QuickBooks IDS Query API endpoint
+
+# ──────────────────────────────────────────────
+# Entity: Account (Chart of Accounts)
+# ──────────────────────────────────────────────
+entities:
+  Account:
+    fields:
+      account_id: "Id"
+      account_name: "Name"
+      fully_qualified_name: "FullyQualifiedName"
+      description: "Description"
+      active: "Active"
+      classification: "Classification"
+      account_type: "AccountType"
+      account_sub_type: "AccountSubType"
+      sub_account: "SubAccount"
+      parent_ref: "ParentRef.value"
+      current_balance: "CurrentBalance"
+      current_balance_with_subs: "CurrentBalanceWithSubAccounts"
+      currency_ref: "CurrencyRef.value"
+    types:
+      Id: string
+      Name: string
+      FullyQualifiedName: string
+      Description: string
+      Active: boolean
+      Classification: string
+      AccountType: string
+      AccountSubType: string
+      SubAccount: boolean
+      CurrentBalance: double
+      CurrentBalanceWithSubAccounts: double
+    synonyms:
+      account: [chart of accounts, ledger account, GL account, coa]
+      balance: [account balance, current balance]
+      classification: [account classification, account category]
+
+  # ──────────────────────────────────────────────
+  # Entity: Customer
+  # ──────────────────────────────────────────────
+  Customer:
+    fields:
+      customer_id: "Id"
+      display_name: "DisplayName"
+      company_name: "CompanyName"
+      given_name: "GivenName"
+      family_name: "FamilyName"
+      fully_qualified_name: "FullyQualifiedName"
+      print_on_check_name: "PrintOnCheckName"
+      active: "Active"
+      taxable: "Taxable"
+      balance: "Balance"
+      balance_with_jobs: "BalanceWithJobs"
+      preferred_delivery_method: "PreferredDeliveryMethod"
+      is_project: "IsProject"
+      bill_addr_city: "BillAddr.City"
+      bill_addr_state: "BillAddr.CountrySubDivisionCode"
+      bill_addr_postal: "BillAddr.PostalCode"
+      primary_phone: "PrimaryPhone.FreeFormNumber"
+      primary_email: "PrimaryEmailAddr.Address"
+    types:
+      Id: string
+      DisplayName: string
+      CompanyName: string
+      GivenName: string
+      FamilyName: string
+      Active: boolean
+      Taxable: boolean
+      Balance: double
+      BalanceWithJobs: double
+      IsProject: boolean
+    synonyms:
+      customer: [client, buyer, purchaser]
+      balance: [open balance, outstanding balance, amount owed]
+      name: [customer name, display name, company name]
+
+  # ──────────────────────────────────────────────
+  # Entity: Vendor
+  # ──────────────────────────────────────────────
+  Vendor:
+    fields:
+      vendor_id: "Id"
+      display_name: "DisplayName"
+      company_name: "CompanyName"
+      given_name: "GivenName"
+      family_name: "FamilyName"
+      print_on_check_name: "PrintOnCheckName"
+      active: "Active"
+      balance: "Balance"
+      acct_num: "AcctNum"
+      vendor_1099: "Vendor1099"
+      bill_rate: "BillRate"
+      term_ref: "TermRef.value"
+      primary_phone: "PrimaryPhone.FreeFormNumber"
+      primary_email: "PrimaryEmailAddr.Address"
+      web_addr: "WebAddr.URI"
+    types:
+      Id: string
+      DisplayName: string
+      Active: boolean
+      Balance: double
+      Vendor1099: boolean
+      BillRate: double
+    synonyms:
+      vendor: [supplier, provider, seller]
+      balance: [vendor balance, amount owed to vendor]
+
+  # ──────────────────────────────────────────────
+  # Entity: Employee
+  # ──────────────────────────────────────────────
+  Employee:
+    fields:
+      employee_id: "Id"
+      display_name: "DisplayName"
+      given_name: "GivenName"
+      family_name: "FamilyName"
+      active: "Active"
+      billable_time: "BillableTime"
+      hired_date: "HiredDate"
+      primary_phone: "PrimaryPhone.FreeFormNumber"
+    types:
+      Id: string
+      DisplayName: string
+      Active: boolean
+      BillableTime: boolean
+      HiredDate: date
+
+  # ──────────────────────────────────────────────
+  # Entity: Item (Products & Services)
+  # ──────────────────────────────────────────────
+  Item:
+    fields:
+      item_id: "Id"
+      item_name: "Name"
+      description: "Description"
+      fully_qualified_name: "FullyQualifiedName"
+      type: "Type"
+      active: "Active"
+      taxable: "Taxable"
+      unit_price: "UnitPrice"
+      purchase_cost: "PurchaseCost"
+      track_qty_on_hand: "TrackQtyOnHand"
+      income_account_ref: "IncomeAccountRef.value"
+    types:
+      Id: string
+      Name: string
+      Type: string
+      Active: boolean
+      Taxable: boolean
+      UnitPrice: double
+      PurchaseCost: double
+      TrackQtyOnHand: boolean
+    synonyms:
+      item: [product, service, sku, merchandise]
+      price: [unit price, selling price, rate]
+
+  # ──────────────────────────────────────────────
+  # Entity: Invoice
+  # ──────────────────────────────────────────────
+  Invoice:
+    fields:
+      invoice_id: "Id"
+      doc_number: "DocNumber"
+      txn_date: "TxnDate"
+      due_date: "DueDate"
+      total_amt: "TotalAmt"
+      balance: "Balance"
+      customer_ref: "CustomerRef.value"
+      customer_name: "CustomerRef.name"
+      sales_term_ref: "SalesTermRef.value"
+      bill_email: "BillEmail.Address"
+      print_status: "PrintStatus"
+      email_status: "EmailStatus"
+    types:
+      Id: string
+      DocNumber: string
+      TxnDate: date
+      DueDate: date
+      TotalAmt: double
+      Balance: double
+    synonyms:
+      invoice: [bill to customer, sales invoice, customer invoice]
+      total: [invoice total, total amount, amount]
+      balance: [unpaid balance, outstanding amount, amount due]
+      overdue: [past due, late]
+
+  # ──────────────────────────────────────────────
+  # Entity: Estimate
+  # ──────────────────────────────────────────────
+  Estimate:
+    fields:
+      estimate_id: "Id"
+      doc_number: "DocNumber"
+      txn_date: "TxnDate"
+      total_amt: "TotalAmt"
+      txn_status: "TxnStatus"
+      customer_ref: "CustomerRef.value"
+      customer_name: "CustomerRef.name"
+    types:
+      Id: string
+      DocNumber: string
+      TxnDate: date
+      TotalAmt: double
+      TxnStatus: string
+    synonyms:
+      estimate: [quote, proposal, bid]
+
+  # ──────────────────────────────────────────────
+  # Entity: SalesReceipt
+  # ──────────────────────────────────────────────
+  SalesReceipt:
+    fields:
+      sales_receipt_id: "Id"
+      doc_number: "DocNumber"
+      txn_date: "TxnDate"
+      total_amt: "TotalAmt"
+      balance: "Balance"
+      customer_ref: "CustomerRef.value"
+      customer_name: "CustomerRef.name"
+      payment_method_ref: "PaymentMethodRef.value"
+      deposit_to_account_ref: "DepositToAccountRef.value"
+    types:
+      Id: string
+      DocNumber: string
+      TxnDate: date
+      TotalAmt: double
+      Balance: double
+    synonyms:
+      sales receipt: [cash sale, receipt, pos sale]
+
+  # ──────────────────────────────────────────────
+  # Entity: CreditMemo
+  # ──────────────────────────────────────────────
+  CreditMemo:
+    fields:
+      credit_memo_id: "Id"
+      doc_number: "DocNumber"
+      txn_date: "TxnDate"
+      total_amt: "TotalAmt"
+      balance: "Balance"
+      remaining_credit: "RemainingCredit"
+      customer_ref: "CustomerRef.value"
+      customer_name: "CustomerRef.name"
+    types:
+      Id: string
+      TxnDate: date
+      TotalAmt: double
+      RemainingCredit: double
+    synonyms:
+      credit memo: [credit note, customer credit, credit]
+
+  # ──────────────────────────────────────────────
+  # Entity: Payment
+  # ──────────────────────────────────────────────
+  Payment:
+    fields:
+      payment_id: "Id"
+      txn_date: "TxnDate"
+      total_amt: "TotalAmt"
+      unapplied_amt: "UnappliedAmt"
+      customer_ref: "CustomerRef.value"
+      customer_name: "CustomerRef.name"
+      payment_method_ref: "PaymentMethodRef.value"
+      deposit_to_account_ref: "DepositToAccountRef.value"
+    types:
+      Id: string
+      TxnDate: date
+      TotalAmt: double
+      UnappliedAmt: double
+    synonyms:
+      payment: [customer payment, payment received, cash receipt]
+
+  # ──────────────────────────────────────────────
+  # Entity: Bill
+  # ──────────────────────────────────────────────
+  Bill:
+    fields:
+      bill_id: "Id"
+      doc_number: "DocNumber"
+      txn_date: "TxnDate"
+      due_date: "DueDate"
+      total_amt: "TotalAmt"
+      balance: "Balance"
+      vendor_ref: "VendorRef.value"
+      vendor_name: "VendorRef.name"
+      sales_term_ref: "SalesTermRef.value"
+      ap_account_ref: "APAccountRef.value"
+    types:
+      Id: string
+      TxnDate: date
+      DueDate: date
+      TotalAmt: double
+      Balance: double
+    synonyms:
+      bill: [vendor bill, vendor invoice, ap bill, accounts payable]
+
+  # ──────────────────────────────────────────────
+  # Entity: BillPayment
+  # ──────────────────────────────────────────────
+  BillPayment:
+    fields:
+      bill_payment_id: "Id"
+      doc_number: "DocNumber"
+      txn_date: "TxnDate"
+      total_amt: "TotalAmt"
+      pay_type: "PayType"
+      vendor_ref: "VendorRef.value"
+      vendor_name: "VendorRef.name"
+    types:
+      Id: string
+      TxnDate: date
+      TotalAmt: double
+      PayType: string
+    synonyms:
+      bill payment: [vendor payment, ap payment, pay bill]
+
+  # ──────────────────────────────────────────────
+  # Entity: PurchaseOrder
+  # ──────────────────────────────────────────────
+  PurchaseOrder:
+    fields:
+      po_id: "Id"
+      doc_number: "DocNumber"
+      txn_date: "TxnDate"
+      total_amt: "TotalAmt"
+      po_status: "POStatus"
+      vendor_ref: "VendorRef.value"
+      vendor_name: "VendorRef.name"
+      ap_account_ref: "APAccountRef.value"
+    types:
+      Id: string
+      TxnDate: date
+      TotalAmt: double
+      POStatus: string
+    synonyms:
+      purchase order: [po, order]
+
+  # ──────────────────────────────────────────────
+  # Entity: Purchase (Expense)
+  # ──────────────────────────────────────────────
+  Purchase:
+    fields:
+      purchase_id: "Id"
+      txn_date: "TxnDate"
+      total_amt: "TotalAmt"
+      payment_type: "PaymentType"
+      credit: "Credit"
+      account_ref: "AccountRef.value"
+      account_name: "AccountRef.name"
+      entity_ref: "EntityRef.value"
+      entity_name: "EntityRef.name"
+    types:
+      Id: string
+      TxnDate: date
+      TotalAmt: double
+      PaymentType: string
+      Credit: boolean
+    synonyms:
+      purchase: [expense, expenditure, spend]
+
+  # ──────────────────────────────────────────────
+  # Entity: Deposit
+  # ──────────────────────────────────────────────
+  Deposit:
+    fields:
+      deposit_id: "Id"
+      txn_date: "TxnDate"
+      total_amt: "TotalAmt"
+      deposit_to_account_ref: "DepositToAccountRef.value"
+      deposit_to_account_name: "DepositToAccountRef.name"
+    types:
+      Id: string
+      TxnDate: date
+      TotalAmt: double
+    synonyms:
+      deposit: [bank deposit, bank transaction]
+
+  # ──────────────────────────────────────────────
+  # Entity: JournalEntry
+  # ──────────────────────────────────────────────
+  JournalEntry:
+    fields:
+      journal_entry_id: "Id"
+      txn_date: "TxnDate"
+      total_amt: "TotalAmt"
+      adjustment: "Adjustment"
+      private_note: "PrivateNote"
+    types:
+      Id: string
+      TxnDate: date
+      TotalAmt: double
+      Adjustment: boolean
+    synonyms:
+      journal entry: [journal, je, manual entry, adjusting entry]
+
+  # ──────────────────────────────────────────────
+  # Entity: RefundReceipt
+  # ──────────────────────────────────────────────
+  RefundReceipt:
+    fields:
+      refund_receipt_id: "Id"
+      doc_number: "DocNumber"
+      txn_date: "TxnDate"
+      total_amt: "TotalAmt"
+      customer_ref: "CustomerRef.value"
+      customer_name: "CustomerRef.name"
+      payment_method_ref: "PaymentMethodRef.value"
+      deposit_to_account_ref: "DepositToAccountRef.value"
+    types:
+      Id: string
+      TxnDate: date
+      TotalAmt: double
+    synonyms:
+      refund receipt: [refund, customer refund]
+
+  # ──────────────────────────────────────────────
+  # Entity: TimeActivity
+  # ──────────────────────────────────────────────
+  TimeActivity:
+    fields:
+      time_activity_id: "Id"
+      txn_date: "TxnDate"
+      name_of: "NameOf"
+      employee_ref: "EmployeeRef.value"
+      employee_name: "EmployeeRef.name"
+      customer_ref: "CustomerRef.value"
+      customer_name: "CustomerRef.name"
+      item_ref: "ItemRef.value"
+      item_name: "ItemRef.name"
+      description: "Description"
+      billable_status: "BillableStatus"
+      hourly_rate: "HourlyRate"
+      hours: "Hours"
+      minutes: "Minutes"
+    types:
+      Id: string
+      TxnDate: date
+      HourlyRate: double
+      Hours: int
+      Minutes: int
+    synonyms:
+      time activity: [time entry, timesheet, time tracking, hours worked]
+
+  # ──────────────────────────────────────────────
+  # Reference Entities
+  # ──────────────────────────────────────────────
+  Term:
+    fields:
+      term_id: "Id"
+      term_name: "Name"
+      type: "Type"
+      active: "Active"
+      due_days: "DueDays"
+      discount_days: "DiscountDays"
+    types:
+      Id: string
+      Name: string
+      DueDays: int
+    synonyms:
+      term: [payment term, net days, due date terms]
+
+  PaymentMethod:
+    fields:
+      payment_method_id: "Id"
+      name: "Name"
+      type: "Type"
+      active: "Active"
+    types:
+      Id: string
+      Name: string
+      Type: string
+    synonyms:
+      payment method: [payment type, method of payment]
+
+  TaxAgency:
+    fields:
+      tax_agency_id: "Id"
+      display_name: "DisplayName"
+      tax_tracked_on_sales: "TaxTrackedOnSales"
+      tax_tracked_on_purchases: "TaxTrackedOnPurchases"
+    types:
+      Id: string
+      DisplayName: string
+    synonyms:
+      tax agency: [tax authority, revenue department]
+
+  TaxRate:
+    fields:
+      tax_rate_id: "Id"
+      name: "Name"
+      rate_value: "RateValue"
+      active: "Active"
+      agency_ref: "AgencyRef.value"
+    types:
+      Id: string
+      RateValue: double
+    synonyms:
+      tax rate: [tax percentage, sales tax rate]
+
+  TaxCode:
+    fields:
+      tax_code_id: "Id"
+      name: "Name"
+      taxable: "Taxable"
+      tax_group: "TaxGroup"
+    types:
+      Id: string
+      Taxable: boolean
+      TaxGroup: boolean
+    synonyms:
+      tax code: [tax category, tax classification]
+
+  Department:
+    fields:
+      department_id: "Id"
+      department_name: "Name"
+      fully_qualified_name: "FullyQualifiedName"
+      active: "Active"
+    types:
+      Id: string
+      Name: string
+    synonyms:
+      department: [dept, division, business unit]
+
+  CompanyInfo:
+    fields:
+      company_name: "CompanyName"
+      legal_name: "LegalName"
+      company_start_date: "CompanyStartDate"
+      fiscal_year_start_month: "FiscalYearStartMonth"
+      country: "Country"
+      email: "Email.Address"
+    types:
+      CompanyName: string
+      CompanyStartDate: date
+
+# ──────────────────────────────────────────────
+# Flattened fields (for splitter/orchestrator metadata merging)
+# ──────────────────────────────────────────────
+fields:
+  # Account
+  account_id: "Account.Id"
+  account_name: "Account.Name"
+  account_type: "Account.AccountType"
+  account_classification: "Account.Classification"
+  account_balance: "Account.CurrentBalance"
+  # Customer
+  customer_id: "Customer.Id"
+  customer_name: "Customer.DisplayName"
+  customer_company: "Customer.CompanyName"
+  customer_email: "Customer.PrimaryEmailAddr.Address"
+  customer_balance: "Customer.Balance"
+  customer_taxable: "Customer.Taxable"
+  # Vendor
+  vendor_id: "Vendor.Id"
+  vendor_name: "Vendor.DisplayName"
+  vendor_balance: "Vendor.Balance"
+  vendor_1099: "Vendor.Vendor1099"
+  # Employee
+  employee_id: "Employee.Id"
+  employee_name: "Employee.DisplayName"
+  # Item
+  item_id: "Item.Id"
+  item_name: "Item.Name"
+  item_type: "Item.Type"
+  item_price: "Item.UnitPrice"
+  # Invoice
+  invoice_id: "Invoice.Id"
+  invoice_number: "Invoice.DocNumber"
+  invoice_date: "Invoice.TxnDate"
+  invoice_due_date: "Invoice.DueDate"
+  invoice_total: "Invoice.TotalAmt"
+  invoice_balance: "Invoice.Balance"
+  invoice_customer: "Invoice.CustomerRef.name"
+  # Estimate
+  estimate_id: "Estimate.Id"
+  estimate_total: "Estimate.TotalAmt"
+  estimate_status: "Estimate.TxnStatus"
+  # Bill
+  bill_id: "Bill.Id"
+  bill_date: "Bill.TxnDate"
+  bill_due_date: "Bill.DueDate"
+  bill_total: "Bill.TotalAmt"
+  bill_balance: "Bill.Balance"
+  bill_vendor: "Bill.VendorRef.name"
+  # Payment
+  payment_id: "Payment.Id"
+  payment_date: "Payment.TxnDate"
+  payment_amount: "Payment.TotalAmt"
+  payment_customer: "Payment.CustomerRef.name"
+  # Purchase
+  purchase_total: "Purchase.TotalAmt"
+  purchase_type: "Purchase.PaymentType"
+  # Deposit
+  deposit_total: "Deposit.TotalAmt"
+  deposit_account: "Deposit.DepositToAccountRef.name"
+  # Time
+  time_hours: "TimeActivity.Hours"
+  time_rate: "TimeActivity.HourlyRate"
+  time_employee: "TimeActivity.EmployeeRef.name"
+  time_customer: "TimeActivity.CustomerRef.name"
+
+# ──────────────────────────────────────────────
+# Relationships (entity cross-references)
+# ──────────────────────────────────────────────
+relationships:
+  - from: Invoice
+    to: Customer
+    via: CustomerRef.value
+    type: many_to_one
+  - from: Invoice
+    to: Term
+    via: SalesTermRef.value
+    type: many_to_one
+  - from: Estimate
+    to: Customer
+    via: CustomerRef.value
+    type: many_to_one
+  - from: Estimate
+    to: Invoice
+    via: LinkedTxn
+    type: one_to_one
+  - from: Payment
+    to: Customer
+    via: CustomerRef.value
+    type: many_to_one
+  - from: Payment
+    to: Invoice
+    via: Line.LinkedTxn
+    type: many_to_many
+  - from: Payment
+    to: Deposit
+    via: LinkedTxn
+    type: many_to_one
+  - from: SalesReceipt
+    to: Customer
+    via: CustomerRef.value
+    type: many_to_one
+  - from: SalesReceipt
+    to: Deposit
+    via: LinkedTxn
+    type: many_to_one
+  - from: CreditMemo
+    to: Customer
+    via: CustomerRef.value
+    type: many_to_one
+  - from: RefundReceipt
+    to: Customer
+    via: CustomerRef.value
+    type: many_to_one
+  - from: Bill
+    to: Vendor
+    via: VendorRef.value
+    type: many_to_one
+  - from: Bill
+    to: Account
+    via: APAccountRef.value
+    type: many_to_one
+  - from: BillPayment
+    to: Vendor
+    via: VendorRef.value
+    type: many_to_one
+  - from: BillPayment
+    to: Bill
+    via: Line.LinkedTxn
+    type: many_to_many
+  - from: PurchaseOrder
+    to: Vendor
+    via: VendorRef.value
+    type: many_to_one
+  - from: PurchaseOrder
+    to: Bill
+    via: LinkedTxn
+    type: one_to_one
+  - from: Purchase
+    to: Account
+    via: AccountRef.value
+    type: many_to_one
+  - from: Purchase
+    to: Vendor
+    via: EntityRef.value
+    type: many_to_one
+  - from: Deposit
+    to: Account
+    via: DepositToAccountRef.value
+    type: many_to_one
+  - from: JournalEntry
+    to: Account
+    via: Line.JournalEntryLineDetail.AccountRef.value
+    type: many_to_many
+  - from: TimeActivity
+    to: Employee
+    via: EmployeeRef.value
+    type: many_to_one
+  - from: TimeActivity
+    to: Customer
+    via: CustomerRef.value
+    type: many_to_one
+  - from: TimeActivity
+    to: Item
+    via: ItemRef.value
+    type: many_to_one
+  - from: Item
+    to: Account
+    via: IncomeAccountRef.value
+    type: many_to_one
+  - from: TaxRate
+    to: TaxAgency
+    via: AgencyRef.value
+    type: many_to_one
+  - from: TaxCode
+    to: TaxRate
+    via: SalesTaxRateList.TaxRateDetail.TaxRateRef.value
+    type: many_to_many
+
+# ──────────────────────────────────────────────
+# Synonyms (merged into splitter metadata)
+# ──────────────────────────────────────────────
+synonyms:
+  invoice: [sales invoice, customer invoice, bill to customer, ar invoice]
+  bill: [vendor bill, ap bill, vendor invoice, accounts payable]
+  payment: [customer payment, payment received, cash receipt]
+  bill payment: [vendor payment, pay bill, ap payment]
+  purchase: [expense, expenditure, spend, charge]
+  deposit: [bank deposit, bank transaction]
+  estimate: [quote, proposal, bid]
+  credit memo: [credit note, customer credit]
+  refund: [refund receipt, customer refund]
+  sales receipt: [cash sale, pos sale, receipt]
+  purchase order: [po, order to vendor]
+  journal entry: [journal, je, adjusting entry]
+  time activity: [timesheet, time entry, hours worked, time tracking]
+  customer: [client, buyer, purchaser]
+  vendor: [supplier, provider, seller]
+  employee: [worker, staff, team member]
+  item: [product, service, sku, merchandise]
+  account: [gl account, ledger account, chart of accounts, coa]
+  total amount: [total, amount, sum, invoice total, bill total]
+  balance: [open balance, outstanding, amount due, unpaid]
+  overdue: [past due, late, delinquent]
+  tax: [sales tax, tax rate, tax code, tax amount]
+  department: [dept, division, business unit]
+  payment method: [payment type, method of payment]
+  payment terms: [net days, term, due date terms]
+
+# ──────────────────────────────────────────────
+# Query hints (QuickBooks IDS query examples)
+# ──────────────────────────────────────────────
+query_hints:
+  select_all_customers: |
+    select * from Customer startposition 1 maxresults 100
+  select_open_invoices: |
+    select * from Invoice where Balance > '0' startposition 1 maxresults 100
+  select_overdue_invoices: |
+    select * from Invoice where DueDate < '2026-03-14' and Balance > '0'
+  select_unpaid_bills: |
+    select * from Bill where Balance > '0' startposition 1 maxresults 100
+  select_items: |
+    select * from Item startposition 1 maxresults 100
+  select_expenses_by_vendor: |
+    select * from Purchase startposition 1 maxresults 100
+  select_time_by_employee: |
+    select * from TimeActivity startposition 1 maxresults 100
+
+# ──────────────────────────────────────────────
+# Metrics
+# ──────────────────────────────────────────────
+metrics:
+  total_revenue:
+    definition: "Sum of TotalAmt across all Invoices"
+  total_expenses:
+    definition: "Sum of TotalAmt across all Bills and Purchases"
+  accounts_receivable:
+    definition: "Sum of Balance across all Invoices where Balance > 0"
+  accounts_payable:
+    definition: "Sum of Balance across all Bills where Balance > 0"
+  net_income:
+    definition: "Total Revenue minus Total Expenses"
+  customer_count:
+    definition: "Count of active Customers"
+  vendor_count:
+    definition: "Count of active Vendors"
+  overdue_invoices:
+    definition: "Invoices where DueDate < today and Balance > 0"
+  billable_hours:
+    definition: "Sum of Hours from TimeActivity where BillableStatus is Billable"
+
+meta:
+  source_type: "api"
+  source_api: "QuickBooks Online IDS Query API"
+  api_base: "http://localhost:8080/api/query"
+  notes:
+    - "Data is fetched via QuickBooks IDS query API, not from a local file."
+    - "Each entity maps to a QuickBooks IDS queryable resource."
+    - "Relationships are established via Ref fields (e.g., CustomerRef.value)."
+    - "Line items within transactions contain nested detail (SalesItemLineDetail, AccountBasedExpenseLineDetail)."

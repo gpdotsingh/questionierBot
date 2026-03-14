@@ -87,6 +87,8 @@ def _load_metadata(dirs: Optional[List[str]] = None) -> Dict[str, Any]:
                 for k in ("fields", "synonyms"):
                     if k in y and isinstance(y[k], dict):
                         merged[k].update(y[k])
+                if "dataset" in y and isinstance(y["dataset"], dict):
+                    merged.setdefault("dataset", {}).update(y["dataset"])
             except Exception:
                 pass
     return merged

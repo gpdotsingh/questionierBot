@@ -118,7 +118,9 @@ def health():
     return {
         "status": "ok",
         "cwd": str(os.getcwd()),
-        "have_data_file": (HERE / "data" / "CRM_Donor_Simulation_Dataset.csv").exists(),
+        "have_crm_data": (HERE / "data" / "CRM_Donor_Simulation_Dataset.csv").exists(),
+        "have_quickbooks_metadata": (HERE / "metadata" / "quickbooks_data.yaml").exists(),
+        "have_quickbooks_semantics": (HERE / "data" / "quickbooks_semantics.yaml").exists(),
     }
 
 @app.post("/chat", response_model=ChatResponse)

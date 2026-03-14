@@ -14,4 +14,4 @@ langgraph
 langchain_text_splitters
 pandas
 psycopg2-binary
-pymongo
+requests

@@ -10,7 +10,7 @@ which python
 
 (chunking) (base) gauravsingh@Gauravs-MacBook-Pro chunking % source .venv/bin/activate 
 
-if I am creating below requirement prepre the project structure wrt to UV as I am going to use uv.
+
 
 0- Data file where I will keep the data
 0- corresponding Metadat or file definitions for data

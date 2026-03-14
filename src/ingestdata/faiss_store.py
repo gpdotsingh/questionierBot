@@ -50,27 +50,14 @@ class FaissVectorStoreCosine:
             "dataset": ds.get("name", "unknown"),
             "granularity": ds.get("granularity", "unknown"),
             "source_type": meta.get("source_type", raw.get("file_type")),
-            "source_path": meta.get("source_path", raw.get("source_file")),
+            "source_path": meta.get("source_path", meta.get("source_api", raw.get("source_file"))),
         }
         def pick(key: str):
             src = fields.get(key)
             if not src: return None
             return raw.get(src) or raw.get(src.lower()) or raw.get(key)
-        out.update({
-            "donor_id": pick("donor_id"),
-            "first_name": pick("first_name"),
-            "last_name": pick("last_name"),
-            "email": pick("email"),
-            "phone": pick("phone"),
-            "city": pick("city"),
-            "state": pick("state"),
-            "zipcode": pick("zipcode"),
-            "last_donation_date": pick("last_donation_date"),
-            "total_gifts": pick("total_gifts"),
-            "total_amount": pick("total_amount"),
-            "event_participation": pick("event_participation"),
-            "engagement_score": pick("engagement_score"),
-        })
+        for logical_name in fields:
+            out[logical_name] = pick(logical_name)
         out["_raw"] = dict(raw)
         return out
 
