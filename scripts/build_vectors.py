@@ -10,7 +10,7 @@ if __name__ == "__main__":
     print("[DEBUG] sys.path[0:5] =", sys.path[:5])
     run_ingestion(
         data_dir="data",
-        yaml_path="metadata/crm_donor_data.yaml",
+        yaml_path="metadata/quickbooks_data.yaml",
         persist_dir="faiss_store",
         embedding_model="all-MiniLM-L6-v2",
         chunk_size=1000,

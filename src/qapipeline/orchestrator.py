@@ -19,6 +19,14 @@ except Exception:
 def _norm(s: str) -> str:
     return LLMJsonMixin.norm(s)
 
+# Strips anything after the entity name so IDS text is always "select * from <Entity>"
+_ENTITY_ONLY = re.compile(r'^\s*select\s+\*\s+from\s+(\w+)', re.IGNORECASE)
+
+def _normalize_ids_query(text: str) -> str:
+    """Ensure the IDS query text is strictly 'select * from <Entity>'."""
+    m = _ENTITY_ONLY.match(text.strip())
+    return f"select * from {m.group(1)}" if m else text.strip()
+
 class _LLMRouter(LLMRouterBase):
     def __init__(self) -> None:
         super().__init__(runtime_name="ORCHESTRATOR")
@@ -29,30 +37,50 @@ class _LLMRouter(LLMRouterBase):
             "You are a query planner for QuickBooks Online IDS Query API.\n"
             "Output ONLY raw JSON (no backticks, no prose) shaped like:\n"
             "{\n"
-            "  \"Q1\": {\"text\": \"select * from Invoice where Balance > '0'\", \"children\": [\n"
-            "    {\"Q2\": {\"text\": \"select * from Customer\", \"children\": []}}\n"
+            "  \"Q1\": {\"text\": \"select * from Invoice\", \"filter\": \"balance > 0 AND txn_status = 'Open'\", \"children\": [\n"
+            "    {\"Q2\": {\"text\": \"select * from Customer\", \"filter\": \"\", \"children\": []}}\n"
             "  ]},\n"
-            "  \"Q3\": {\"text\": \"select * from Bill where TotalAmt > '500'\", \"children\": []}\n"
+            "  \"Q3\": {\"text\": \"select * from Bill\", \"filter\": \"total_amt > 500\", \"children\": []}\n"
             "}\n"
             "Rules:\n"
-            "- Each node's \"text\" must be a single QuickBooks IDS query string.\n"
-            "- IDS query syntax: SELECT * FROM <Entity> [WHERE <conditions>] [ORDERBY <field> [ASC|DESC]] [STARTPOSITION n] [MAXRESULTS n]\n"
-            "- WHERE clause operators: =, <, >, <=, >=, LIKE, IN\n"
-            "- String values must be single-quoted: WHERE DisplayName = 'John Smith'\n"
-            "- Date values use format: WHERE TxnDate > '2025-01-01'\n"
-            "- Numeric values are unquoted: WHERE TotalAmt > 1000\n"
-            "- Boolean values: WHERE Active = true\n"
-            "- LIKE uses '%' wildcard: WHERE DisplayName LIKE '%smith%'\n"
-            "- IN uses parentheses: WHERE Id IN ('1', '2', '3')\n"
-            "- No $match, $group, $sort or MongoDB syntax. IDS queries only.\n"
-            "- IDS does NOT support JOIN, GROUP BY, SUM, COUNT, AVG or subqueries.\n"
-            "- To aggregate, fetch raw data and let the downstream compiler handle it.\n"
-            "- If asking for 'top N' or 'highest', use ORDERBY <field> DESC MAXRESULTS N.\n"
+            "- Each node has exactly two fields: \"text\" and \"filter\".\n"
+            "- CRITICAL: \"text\" must ONLY be: select * from <EntityName>  — nothing else.\n"
+            "  Do NOT add WHERE, ORDERBY, STARTPOSITION, MAXRESULTS or any other clause to \"text\".\n"
+            "  Correct:   \"text\": \"select * from Invoice\"\n"
+            "  WRONG:     \"text\": \"select * from Invoice where Balance > '0'\"\n"
+            "  WRONG:     \"text\": \"select * from Invoice ORDERBY TxnDate DESC MAXRESULTS 10\"\n"
+            "- All filtering and sorting logic goes into the \"filter\" field, NOT into \"text\".\n"
             f"- Available entities: {entity_list}\n"
             "- Keep steps minimal and nest dependents as children.\n"
-            "- Resolve natural language via Metadata.synonyms when mapping to fields.\n"
+            "- No $match, $group, $sort or MongoDB syntax.\n"
+            "- IDS does NOT support JOIN, GROUP BY, SUM, COUNT, AVG or subqueries.\n"
+            "- To aggregate, fetch raw data and let the downstream compiler handle it.\n"
+            "- CRITICAL: Only use field names listed in the entity reference below. "
+            "Check valid_values for categorical fields.\n"
+            "- CRITICAL: Purchase (expense transactions, has PaymentType) and PurchaseOrder (purchase orders, has POStatus) are DIFFERENT entities.\n"
             "- No commentary, no code fences. Keys must be Q1..Qn only.\n"
-            "- Default MAXRESULTS to 100 unless user asks for specific count.\n"
+            "\n"
+            "\"filter\" field — WHERE clause applied on cached results after fetch:\n"
+            "  Operators : =  !=  >  <  >=  <=  LIKE  BETWEEN … AND …  IS NULL  IS NOT NULL\n"
+            "  Logical   : AND  OR  parentheses for grouping\n"
+            "  Field names: snake_case  e.g. total_amt, txn_date, vendor_ref_name, unit_price\n"
+            "  Strings   : single-quoted   type = 'Service'\n"
+            "  Numbers   : unquoted        unit_price > 9.99\n"
+            "  Booleans  : unquoted        active = true\n"
+            "  Blank     : \"filter\": \"\"   (no filtering — return all fetched records)\n"
+            "\n"
+            "  Examples:\n"
+            "    \"filter\": \"\"                                           → all records\n"
+            "    \"filter\": \"type = 'Service'\"                          → equality\n"
+            "    \"filter\": \"unit_price > 9.99\"                         → numeric\n"
+            "    \"filter\": \"total_amt BETWEEN 100 AND 500\"             → range\n"
+            "    \"filter\": \"display_name LIKE '%tech%'\"                → partial match\n"
+            "    \"filter\": \"txn_date >= '2025-01-01' AND txn_date <= '2025-12-31'\"  → date range\n"
+            "    \"filter\": \"type = 'Service' AND active = true AND unit_price > 5\"  → multi-condition\n"
+            "    \"filter\": \"(type = 'Service' OR type = 'Inventory') AND unit_price > 5\"  → grouped\n"
+            "    \"filter\": \"vendor_ref_name IS NOT NULL\"               → null check\n"
+            "  Resolve natural language via Metadata.synonyms when mapping to fields.\n"
+            "  CRITICAL: Fields with valid_values must use only defined values.\n"
         )
 
     @staticmethod
@@ -156,23 +184,59 @@ class Orchestrator(LLMJsonMixin):
             "SalesReceipt, TaxAgency, TaxCode, TaxRate, Term, TimeActivity, Vendor"
         )
 
+    def _build_entity_reference(self) -> str:
+        """Build a concise entity→fields→valid_values reference for the LLM prompt."""
+        if not isinstance(self.metadata, dict):
+            return ""
+        entities = self.metadata.get("entities")
+        if not isinstance(entities, dict):
+            return ""
+        lines: List[str] = []
+        for name in sorted(entities.keys()):
+            info = entities[name]
+            if not isinstance(info, dict):
+                continue
+            fields = info.get("fields", {})
+            types = info.get("types", {})
+            valid = info.get("valid_values", {})
+            # Build field list: show IDS field name and type
+            field_parts: List[str] = []
+            for _alias, ids_field in fields.items():
+                ftype = types.get(ids_field, "")
+                ftype_str = f" ({ftype})" if ftype else ""
+                field_parts.append(f"{ids_field}{ftype_str}")
+            lines.append(f"{name}: {', '.join(field_parts)}")
+            # Show valid values for categorical fields
+            for field_name, values in valid.items():
+                if isinstance(values, list):
+                    lines.append(f"  {field_name} valid values: {values}")
+        return "\n".join(lines)
+
     def _attempt_llm(self, user_query: str, memory_text: str = "") -> Optional[Dict[str, Any]]:
         if not (self.try_llm and self.router and self.router.provider):
             return None
         entity_list = self._get_entity_list()
-        meta_text = self.metadata if isinstance(self.metadata, str) else json.dumps(self.metadata, default=str)
+        entity_ref = self._build_entity_reference()
+        meta_text = entity_ref if entity_ref else (
+            self.metadata if isinstance(self.metadata, str) else json.dumps(self.metadata, default=str)
+        )
         prompt = _LLMRouter._prompt_header(entity_list=entity_list) + "\n" + _LLMRouter._prompt_body(user_query, meta_text, memory_text=memory_text)
         return self.router.ask_json(prompt)
 
-    def _extract_query_list(self, tree: Dict[str, Any]) -> List[str]:
-        """Walk the Q-tree and extract each IDS query string."""
-        queries: List[str] = []
+    def _extract_query_list(self, tree: Dict[str, Any]) -> List[Dict[str, str]]:
+        """Walk the Q-tree and extract each node as {"text": <IDS query>, "filter": <WHERE clause>}.
+        'filter' is the optional cache WHERE clause sent alongside the IDS query to /api/query.
+        """
+        nodes: List[Dict[str, str]] = []
         def walk(node: Any) -> None:
             if not isinstance(node, dict):
                 return
             text = node.get("text")
             if isinstance(text, str) and text.strip():
-                queries.append(text.strip())
+                nodes.append({
+                    "text": _normalize_ids_query(text),   # always "select * from <Entity>"
+                    "filter": node.get("filter", "") or "",
+                })
             for child in node.get("children") or []:
                 if isinstance(child, dict):
                     for _, cv in child.items():
@@ -182,7 +246,7 @@ class Orchestrator(LLMJsonMixin):
             key=lambda kv: int(kv[0][1:]) if isinstance(kv[0], str) and kv[0].startswith("Q") and kv[0][1:].isdigit() else 0
         ):
             walk(v)
-        return queries
+        return nodes
 
     @staticmethod
     def _extract_entity_data(raw_json: str) -> str:
@@ -246,9 +310,15 @@ class Orchestrator(LLMJsonMixin):
         session.headers.update(headers)
 
         try:
-            for query_text in queries:
+            for node in queries:
+                query_text = node["text"]
+                where_filter = node.get("filter", "")
+                # Build request body: always send query, add filter only when non-empty
+                payload: Dict[str, str] = {"query": query_text}
+                if where_filter:
+                    payload["filter"] = where_filter
                 try:
-                    resp = session.post(url, json={"query": query_text}, timeout=30)
+                    resp = session.post(url, json=payload, timeout=30)
                     resp.raise_for_status()
                     entity_data = self._extract_entity_data(resp.text)
                     results.append(entity_data)
