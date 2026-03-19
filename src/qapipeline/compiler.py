@@ -2,8 +2,6 @@ from __future__ import annotations
 from typing import Any, Dict, Optional
 import json
 
-from qapipeline.llm_common import LLMRouterBase
-from splitter import _LLMRouter
 from .models import OrchestratorOutput, CompilerOutput
 from .llm_common import LLMRouterBase, LLMJsonMixin
 
@@ -13,11 +11,11 @@ def _norm(s: str) -> str:
     
 class _LLMRouter(LLMRouterBase):
     def __init__(self) -> None:
-        super().__init__(runtime_name="ORCHESTRATOR")
+        super().__init__(runtime_name="COMPILER")
 
         # ---- Prompt builder ----
     @staticmethod
-    def _prompt_header(self, output: OrchestratorOutput) -> str:
+    def _prompt_header(output: OrchestratorOutput) -> str:
         oq = (output.original_question or "").strip()
         
         return (
@@ -29,8 +27,8 @@ class _LLMRouter(LLMRouterBase):
             "- If results are empty or contain errors, state that and suggest a correction.\n"
             "- Plain text only. No code fences, no SQL, no JSON.\n\n"
             f"OriginalQuestion:\n{oq}\n\n"
-                     "Now write the final answer:"
-            "Output human-readable answer in JSON format :"
+            "Now write the final answer.\n"
+            'Output as JSON with a single key "final" containing your answer string, e.g. {"final": "Your answer here"}:\n'
         )
 
     @staticmethod
@@ -76,19 +74,35 @@ class LLMCompiler:
     def _results_to_text(self, qr: Dict[str, Any]) -> str:
         if not qr:
             return "(none)"
-        
+
         vals = None
         if isinstance(qr, dict):
             vals = qr.get("results") or qr.get("data") or qr
         else:
             vals = qr
-        if isinstance(vals, list):
-            out = []
-            for i, item in enumerate(vals, 1):
-                s = item if isinstance(item, str) else json.dumps(item) if isinstance(item, (dict, list)) else str(item)
-                out.append(f"- Result {i}: {s[:800]}")
-            return "\n".join(out)
-        return str(vals)
+
+        if not isinstance(vals, list):
+            return str(vals)
+
+        out = []
+        for i, item in enumerate(vals, 1):
+            # Each item in query_result is a JSON array string (all records for one entity).
+            # Parse it so every individual record is shown to the LLM, not just the first 800 chars.
+            if isinstance(item, str) and item.strip().startswith("["):
+                try:
+                    records = json.loads(item)
+                    if isinstance(records, list):
+                        out.append(f"QueryResult {i} ({len(records)} records):")
+                        for j, rec in enumerate(records, 1):
+                            rec_s = json.dumps(rec) if isinstance(rec, dict) else str(rec)
+                            out.append(f"  [{j}] {rec_s[:600]}")
+                        continue
+                except (json.JSONDecodeError, TypeError):
+                    pass
+            # Fallback: plain string or dict — show up to 2000 chars
+            s = item if isinstance(item, str) else json.dumps(item) if isinstance(item, (dict, list)) else str(item)
+            out.append(f"- Result {i}: {s[:2000]}")
+        return "\n".join(out)
 
     
     # ---- LLM attempt ----
@@ -99,14 +113,24 @@ class LLMCompiler:
         meta = self._meta_to_text(output.metadata or {})
         results = self._results_to_text(output.query_result or {})
         body = _LLMRouter._prompt_body(output.original_question or "",meta, results)
-        header = _LLMRouter._prompt_header(self=self, output=output)
+        header = _LLMRouter._prompt_header(output=output)
         prompt = header + body
         raw = self.router.ask_json(prompt)
+        print(f"[DEBUG compiler] raw from LLM: {raw}")
 
-        # If ask_json returns dict, try extracting a 'final' or join keys; else return None.
+        # If ask_json returns dict, try extracting a known answer key; else join all values.
         if isinstance(raw, dict):
-            # Prefer a 'final' key; otherwise join string values
-            final = raw.get("final") or "\n".join(str(v) for v in raw.values() if isinstance(v, str))
+            # Prefer common answer keys the LLM might use
+            final = (
+                raw.get("final")
+                or raw.get("answer")
+                or raw.get("response")
+                or raw.get("final_answer")
+                or raw.get("summary")
+            )
+            # If none of the known keys matched, join ALL values (not just strings)
+            if not final:
+                final = "\n".join(str(v) for v in raw.values() if v)
             return final or None
         # If router returns text, pass through
         if isinstance(raw, str) and raw.strip():

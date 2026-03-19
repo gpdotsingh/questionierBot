@@ -1,7 +1,6 @@
 .env
 .history/
 *.sqlite3
-data/
 vectors/
 vector_store_v3/
 faiss_store/

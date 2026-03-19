@@ -71,28 +71,48 @@ class ProviderRuntime:
 
 
 def _component_key(component: str) -> str:
-    return f"{component.strip().upper()}_PROVIDER"
+    return component.strip().upper()
 
 
 @lru_cache(maxsize=None)
 def get_provider_config(component: str) -> ProviderConfig:
     """
     Read provider-specific values for a pipeline component from the environment.
-    Values are cached so repeated lookups do not hit os.environ or disk again.
+
+    Per-component env vars (all optional, fall back to global):
+        {COMPONENT}_PROVIDER       → "openai" or "ollama"  (fallback: DEFAULT_PROVIDER)
+        {COMPONENT}_OPENAI_MODEL   → e.g. "gpt-4o"         (fallback: OPENAI_MODEL)
+        {COMPONENT}_OLLAMA_MODEL   → e.g. "llama3.1"       (fallback: OLLAMA_GEN_MODEL)
+
+    Values are cached so repeated lookups do not hit os.environ again.
     """
     ensure_env_loaded()
+    comp = _component_key(component)
+
+    # Provider: per-component → global default
     provider = (
-        os.getenv(_component_key(component))
+        os.getenv(f"{comp}_PROVIDER")
         or os.getenv("DEFAULT_PROVIDER")
         or ""
     ).lower().strip()
+
+    # Model: per-component → global
+    openai_model = (
+        os.getenv(f"{comp}_OPENAI_MODEL")
+        or os.getenv("OPENAI_MODEL", "gpt-4o")
+    )
+    ollama_model = (
+        os.getenv(f"{comp}_OLLAMA_MODEL")
+        or os.getenv("OLLAMA_GEN_MODEL", "llama3.1")
+    )
+
     return ProviderConfig(
         component=component,
         provider=provider,
         openai_key=os.getenv("OPENAI_API_KEY"),
-        openai_model=os.getenv("OPENAI_MODEL", "gpt-4o"),
+        openai_model=openai_model,
         ollama_url=os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434"),
-        ollama_model=os.getenv("OLLAMA_GEN_MODEL", "llama3.1"),
+        ollama_model=ollama_model,
     )
 
 

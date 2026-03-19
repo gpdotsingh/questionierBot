@@ -24,6 +24,7 @@ from qapipeline import (
     QuestionSplitter, Orchestrator, LLMCompiler, Validator,
     ValidatorInput
 )
+from observability import start_trace, end_trace, flush
 
 app = FastAPI(title="QA Pipeline Chat (Dummy Chain)", version="1.0")
 
@@ -129,6 +130,14 @@ def chat(req: ChatRequest) -> ChatResponse:
     history.append(("user", req.message))
     memory_ctx = "\n".join(f"{role.upper()}: {content}" for role, content in history)
 
+    # Langfuse trace (no-op when not configured)
+    start_trace(
+        name="chat",
+        user_id=sid,
+        session_id=sid,
+        metadata={"message": req.message},
+    )
+
     # 1. Split question
     splitter = QuestionSplitter(try_llm=req.try_llm)
     plan = splitter.plan(req.message, memory_text=memory_ctx)  # NEW: pass memory
@@ -158,6 +167,10 @@ def chat(req: ChatRequest) -> ChatResponse:
 
     truncated_response = _truncate_response_json(verdict.response_json, max_words=1000)
     final_answer = json.dumps(truncated_response) if truncated_response else compiled.final_answer
+
+    # Close Langfuse trace
+    end_trace(output=compiled.final_answer, score=verdict.score)
+    flush()
 
     return ChatResponse(
         used_llm_in_splitter=plan.used_llm,

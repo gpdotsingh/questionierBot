@@ -1,0 +1,1549 @@
+version: 1
+
+dataset:
+  name: quickbooks_online
+  description: >
+    Multi-entity accounting data from QuickBooks Online. Entities include
+    Account, Customer, Vendor, Employee, Item, Invoice, Estimate, SalesReceipt,
+    CreditMemo, RefundReceipt, Payment, Bill, BillPayment, PurchaseOrder,
+    Purchase, Deposit, JournalEntry, TimeActivity, Term, PaymentMethod,
+    TaxAgency, TaxRate, TaxCode, Department, CompanyInfo, ExchangeRate,
+    Preferences, Transfer, VendorCredit, Class, Budget, Attachable.
+  granularity: entity
+  source: quickbooks_api
+
+dimensions:
+  # ---- Master entities ----
+  account_id:
+    column: id
+    type: string
+    synonyms: ["account id", "gl id", "account number"]
+  account_name:
+    column: name
+    type: string
+    synonyms: ["account", "gl account", "ledger account"]
+  account_type:
+    column: account_type
+    type: categorical
+    synonyms: ["type of account", "account category"]
+    values:
+      - "Bank"
+      - "Accounts Receivable"
+      - "Other Current Asset"
+      - "Fixed Asset"
+      - "Other Asset"
+      - "Accounts Payable"
+      - "Credit Card"
+      - "Other Current Liability"
+      - "Long Term Liability"
+      - "Equity"
+      - "Income"
+      - "Cost of Goods Sold"
+      - "Expense"
+      - "Other Income"
+      - "Other Expense"
+  account_classification:
+    column: classification
+    type: categorical
+    synonyms: ["account classification", "account category"]
+    values: ["Asset", "Liability", "Equity", "Revenue", "Expense"]
+  account_balance:
+    column: current_balance
+    type: double
+    synonyms: ["account balance", "current balance", "gl balance"]
+  invoice_total:
+    column: total_amt
+    type: double
+    synonyms: ["invoice amount", "invoice total", "total amount"]
+  invoice_balance:
+    column: balance
+    type: double
+    synonyms: ["unpaid balance", "outstanding amount", "amount due"]
+  invoice_status:
+    column: email_status
+    type: categorical
+    values: ["NeedToSend", "EmailSent", "NotSet"]
+  customer_name:
+    column: display_name
+    type: string
+    synonyms: ["client name", "buyer", "customer"]
+  customer_balance:
+    column: balance
+    type: double
+    synonyms: ["open balance", "outstanding balance", "amount owed"]
+  vendor_name:
+    column: display_name
+    type: string
+    synonyms: ["supplier", "provider", "seller"]
+  vendor_balance:
+    column: balance
+    type: double
+    synonyms: ["vendor balance", "amount owed to vendor"]
+  employee_name:
+    column: display_name
+    type: string
+    synonyms: ["worker", "staff member", "team member"]
+  item_type:
+    column: type
+    type: categorical
+    values: ["Service", "Inventory", "NonInventory", "Bundle", "Group"]
+  item_price:
+    column: unit_price
+    type: double
+    synonyms: ["unit price", "selling price", "rate"]
+  billable_status:
+    column: billable_status
+    type: categorical
+    values: ["Billable", "NotBillable", "HasBeenBilled"]
+  estimate_status:
+    column: txn_status
+    type: categorical
+    values: ["Accepted", "Closed", "Pending", "Rejected"]
+  payment_type:
+    column: payment_type
+    type: categorical
+    values: ["Cash", "Check", "CreditCard"]
+  po_status:
+    column: po_status
+    type: categorical
+    values: ["Open", "Closed"]
+  pay_type:
+    column: pay_type
+    type: categorical
+    values: ["Check", "CreditCard"]
+  payment_method_type:
+    column: type
+    type: categorical
+    values: ["CREDIT_CARD", "NON_CREDIT_CARD"]
+  bill_balance:
+    column: balance
+    type: double
+    synonyms: ["unpaid bill", "ap balance", "amount owed to vendor"]
+  txn_date:
+    column: txn_date
+    type: date
+    synonyms: ["transaction date", "date", "posting date"]
+  due_date:
+    column: due_date
+    type: date
+    synonyms: ["payment due date", "due by"]
+
+entities:
+  # ──────────────────────────────────────────────
+  # Entity: Account (Chart of Accounts)
+  # ──────────────────────────────────────────────
+  Account:
+    fields:
+      - id
+      - sync_token
+      - domain
+      - sparse
+      - name
+      - fully_qualified_name
+      - description
+      - active
+      - classification
+      - account_type
+      - account_sub_type
+      - sub_account
+      - parent_ref_value
+      - current_balance
+      - current_balance_with_sub_accounts
+      - currency_ref_value
+      - currency_ref_name
+      - meta_data_create_time
+      - meta_data_last_updated_time
+    synonyms:
+      account: [chart of accounts, ledger account, GL account, coa]
+      balance: [account balance, current balance]
+      classification: [account classification, account category]
+    dimensions:
+      - id
+      - name
+      - classification
+      - account_type
+      - account_sub_type
+      - active
+      - sub_account
+      - parent_ref_value
+      - currency_ref_value
+    measures:
+      - current_balance
+      - current_balance_with_sub_accounts
+
+  # ──────────────────────────────────────────────
+  # Entity: Customer
+  # ──────────────────────────────────────────────
+  Customer:
+    fields:
+      - id
+      - sync_token
+      - domain
+      - sparse
+      - display_name
+      - company_name
+      - given_name
+      - family_name
+      - fully_qualified_name
+      - print_on_check_name
+      - active
+      - taxable
+      - job
+      - bill_with_parent
+      - balance
+      - balance_with_jobs
+      - preferred_delivery_method
+      - is_project
+      - client_entity_id
+      - level
+      - parent_ref_value
+      - v4_id_pseudonym
+      - currency_ref_value
+      - currency_ref_name
+      - bill_addr_id
+      - bill_addr_line1
+      - bill_addr_city
+      - bill_addr_country_sub_division_code
+      - bill_addr_postal_code
+      - bill_addr_lat
+      - bill_addr_long
+      - ship_addr_id
+      - ship_addr_line1
+      - ship_addr_city
+      - ship_addr_country_sub_division_code
+      - ship_addr_postal_code
+      - ship_addr_lat
+      - ship_addr_long
+      - primary_phone_free_form_number
+      - primary_email_addr_address
+      - meta_data_create_time
+      - meta_data_last_updated_time
+    synonyms:
+      customer: [client, buyer, purchaser]
+      balance: [open balance, outstanding balance, amount owed]
+      name: [customer name, display name, company name]
+    dimensions:
+      - id
+      - display_name
+      - company_name
+      - given_name
+      - family_name
+      - fully_qualified_name
+      - active
+      - taxable
+      - job
+      - preferred_delivery_method
+      - currency_ref_value
+      - bill_addr_city
+      - bill_addr_country_sub_division_code
+      - primary_email_addr_address
+    measures:
+      - balance
+      - balance_with_jobs
+
+  # ──────────────────────────────────────────────
+  # Entity: Vendor
+  # ──────────────────────────────────────────────
+  Vendor:
+    fields:
+      - id
+      - sync_token
+      - domain
+      - sparse
+      - display_name
+      - company_name
+      - given_name
+      - family_name
+      - print_on_check_name
+      - active
+      - balance
+      - acct_num
+      - vendor1099
+      - bill_rate
+      - term_ref_value
+      - currency_ref_value
+      - currency_ref_name
+      - v4_id_pseudonym
+      - bill_addr_id
+      - bill_addr_line1
+      - bill_addr_city
+      - bill_addr_country_sub_division_code
+      - bill_addr_postal_code
+      - bill_addr_lat
+      - bill_addr_long
+      - primary_phone_free_form_number
+      - primary_email_addr_address
+      - mobile_free_form_number
+      - fax_free_form_number
+      - web_addr_uri
+      - meta_data_create_time
+      - meta_data_last_updated_time
+    synonyms:
+      vendor: [supplier, provider, seller]
+      balance: [vendor balance, amount owed to vendor]
+    dimensions:
+      - id
+      - display_name
+      - company_name
+      - given_name
+      - family_name
+      - active
+      - vendor1099
+      - term_ref_value
+      - currency_ref_value
+      - bill_addr_city
+      - primary_email_addr_address
+    measures:
+      - balance
+      - bill_rate
+
+  # ──────────────────────────────────────────────
+  # Entity: Employee
+  # ──────────────────────────────────────────────
+  Employee:
+    fields:
+      - id
+      - sync_token
+      - domain
+      - sparse
+      - display_name
+      - given_name
+      - family_name
+      - print_on_check_name
+      - active
+      - billable_time
+      - hired_date
+      - v4_id_pseudonym
+      - primary_phone_free_form_number
+      - meta_data_create_time
+      - meta_data_last_updated_time
+    synonyms:
+      employee: [worker, staff, team member]
+    dimensions:
+      - id
+      - display_name
+      - given_name
+      - family_name
+      - active
+      - billable_time
+      - hired_date
+
+  # ──────────────────────────────────────────────
+  # Entity: Item (Products & Services)
+  # ──────────────────────────────────────────────
+  Item:
+    fields:
+      - id
+      - sync_token
+      - domain
+      - sparse
+      - name
+      - description
+      - fully_qualified_name
+      - type
+      - active
+      - taxable
+      - unit_price
+      - purchase_cost
+      - track_qty_on_hand
+      - income_account_ref_value
+      - income_account_ref_name
+      - meta_data_create_time
+      - meta_data_last_updated_time
+    synonyms:
+      item: [product, service, sku, merchandise]
+      price: [unit price, selling price, rate]
+    dimensions:
+      - id
+      - name
+      - fully_qualified_name
+      - type
+      - active
+      - taxable
+      - income_account_ref_value
+      - income_account_ref_name
+    measures:
+      - unit_price
+      - purchase_cost
+
+  # ──────────────────────────────────────────────
+  # Entity: Invoice
+  # ──────────────────────────────────────────────
+  Invoice:
+    fields:
+      - id
+      - sync_token
+      - domain
+      - sparse
+      - doc_number
+      - txn_date
+      - due_date
+      - total_amt
+      - balance
+      - customer_ref_value
+      - customer_ref_name
+      - customer_memo_value
+      - sales_term_ref_value
+      - sales_term_ref_name
+      - bill_email_address
+      - print_status
+      - email_status
+      - currency_ref_value
+      - currency_ref_name
+      - txn_tax_detail_total_tax
+      - txn_tax_detail_txn_tax_code_ref_value
+      - apply_tax_after_discount
+      - allow_ipn_payment
+      - allow_online_payment
+      - allow_online_credit_card_payment
+      - allow_online_ach_payment
+      - free_form_address
+      - delivery_info_delivery_type
+      - bill_addr_id
+      - bill_addr_line1
+      - bill_addr_line2
+      - bill_addr_line3
+      - bill_addr_line4
+      - bill_addr_lat
+      - bill_addr_long
+      - ship_addr_id
+      - ship_addr_line1
+      - ship_addr_city
+      - ship_addr_country_sub_division_code
+      - ship_addr_postal_code
+      - ship_addr_lat
+      - ship_addr_long
+      - meta_data_create_time
+      - meta_data_last_modified_by_ref_value
+      - meta_data_last_updated_time
+    synonyms:
+      invoice: [bill to customer, sales invoice, customer invoice]
+      total: [invoice total, total amount, amount]
+      balance: [unpaid balance, outstanding amount, amount due]
+      overdue: [past due, late]
+    dimensions:
+      - id
+      - doc_number
+      - txn_date
+      - due_date
+      - customer_ref_value
+      - customer_ref_name
+      - sales_term_ref_value
+      - sales_term_ref_name
+      - print_status
+      - email_status
+      - currency_ref_value
+      - delivery_info_delivery_type
+    measures:
+      - total_amt
+      - balance
+      - txn_tax_detail_total_tax
+
+  # ──────────────────────────────────────────────
+  # Entity: Estimate
+  # ──────────────────────────────────────────────
+  Estimate:
+    fields:
+      - id
+      - sync_token
+      - domain
+      - sparse
+      - doc_number
+      - txn_date
+      - total_amt
+      - txn_status
+      - customer_ref_value
+      - customer_ref_name
+      - customer_memo_value
+      - bill_email_address
+      - print_status
+      - email_status
+      - currency_ref_value
+      - currency_ref_name
+      - txn_tax_detail_total_tax
+      - txn_tax_detail_txn_tax_code_ref_value
+      - apply_tax_after_discount
+      - free_form_address
+      - delivery_info_delivery_type
+      - bill_addr_id
+      - bill_addr_line1
+      - bill_addr_line2
+      - bill_addr_line3
+      - bill_addr_line4
+      - bill_addr_lat
+      - bill_addr_long
+      - ship_addr_id
+      - ship_addr_line1
+      - ship_addr_city
+      - ship_addr_country_sub_division_code
+      - ship_addr_postal_code
+      - ship_addr_lat
+      - ship_addr_long
+      - meta_data_create_time
+      - meta_data_last_updated_time
+    synonyms:
+      estimate: [quote, proposal, bid]
+    dimensions:
+      - id
+      - doc_number
+      - txn_date
+      - txn_status
+      - customer_ref_value
+      - customer_ref_name
+      - print_status
+      - email_status
+      - currency_ref_value
+    measures:
+      - total_amt
+      - txn_tax_detail_total_tax
+
+  # ──────────────────────────────────────────────
+  # Entity: SalesReceipt
+  # ──────────────────────────────────────────────
+  SalesReceipt:
+    fields:
+      - id
+      - sync_token
+      - domain
+      - sparse
+      - doc_number
+      - txn_date
+      - total_amt
+      - balance
+      - customer_ref_value
+      - customer_ref_name
+      - customer_memo_value
+      - bill_email_address
+      - print_status
+      - email_status
+      - payment_method_ref_value
+      - payment_method_ref_name
+      - payment_ref_num
+      - deposit_to_account_ref_value
+      - deposit_to_account_ref_name
+      - currency_ref_value
+      - currency_ref_name
+      - txn_tax_detail_total_tax
+      - apply_tax_after_discount
+      - free_form_address
+      - bill_addr_id
+      - bill_addr_line1
+      - bill_addr_line2
+      - bill_addr_line3
+      - bill_addr_line4
+      - bill_addr_lat
+      - bill_addr_long
+      - ship_addr_id
+      - ship_addr_line1
+      - ship_addr_city
+      - ship_addr_country_sub_division_code
+      - ship_addr_postal_code
+      - ship_addr_country
+      - ship_addr_lat
+      - ship_addr_long
+      - meta_data_create_time
+      - meta_data_last_updated_time
+    synonyms:
+      sales receipt: [cash sale, receipt, pos sale]
+    dimensions:
+      - id
+      - doc_number
+      - txn_date
+      - customer_ref_value
+      - customer_ref_name
+      - payment_method_ref_value
+      - payment_method_ref_name
+      - deposit_to_account_ref_value
+      - print_status
+      - email_status
+      - currency_ref_value
+    measures:
+      - total_amt
+      - balance
+      - txn_tax_detail_total_tax
+
+  # ──────────────────────────────────────────────
+  # Entity: CreditMemo
+  # ──────────────────────────────────────────────
+  CreditMemo:
+    fields:
+      - id
+      - sync_token
+      - domain
+      - sparse
+      - doc_number
+      - txn_date
+      - total_amt
+      - balance
+      - remaining_credit
+      - customer_ref_value
+      - customer_ref_name
+      - customer_memo_value
+      - bill_email_address
+      - print_status
+      - email_status
+      - currency_ref_value
+      - currency_ref_name
+      - txn_tax_detail_total_tax
+      - apply_tax_after_discount
+      - free_form_address
+      - bill_addr_id
+      - bill_addr_line1
+      - bill_addr_line2
+      - bill_addr_line3
+      - bill_addr_line4
+      - bill_addr_lat
+      - bill_addr_long
+      - ship_addr_id
+      - ship_addr_line1
+      - ship_addr_city
+      - ship_addr_country_sub_division_code
+      - ship_addr_postal_code
+      - ship_addr_lat
+      - ship_addr_long
+      - meta_data_create_time
+      - meta_data_last_updated_time
+    synonyms:
+      credit memo: [credit note, customer credit, credit]
+    dimensions:
+      - id
+      - doc_number
+      - txn_date
+      - customer_ref_value
+      - customer_ref_name
+      - print_status
+      - email_status
+      - currency_ref_value
+    measures:
+      - total_amt
+      - balance
+      - remaining_credit
+      - txn_tax_detail_total_tax
+
+  # ──────────────────────────────────────────────
+  # Entity: Payment
+  # ──────────────────────────────────────────────
+  Payment:
+    fields:
+      - id
+      - sync_token
+      - domain
+      - sparse
+      - txn_date
+      - total_amt
+      - unapplied_amt
+      - process_payment
+      - customer_ref_value
+      - customer_ref_name
+      - payment_method_ref_value
+      - deposit_to_account_ref_value
+      - payment_ref_num
+      - private_note
+      - currency_ref_value
+      - currency_ref_name
+      - meta_data_create_time
+      - meta_data_last_updated_time
+    synonyms:
+      payment: [customer payment, payment received, cash receipt]
+    dimensions:
+      - id
+      - txn_date
+      - customer_ref_value
+      - customer_ref_name
+      - payment_method_ref_value
+      - deposit_to_account_ref_value
+      - currency_ref_value
+    measures:
+      - total_amt
+      - unapplied_amt
+
+  # ──────────────────────────────────────────────
+  # Entity: Bill
+  # ──────────────────────────────────────────────
+  Bill:
+    fields:
+      - id
+      - sync_token
+      - domain
+      - sparse
+      - txn_date
+      - due_date
+      - total_amt
+      - balance
+      - vendor_ref_value
+      - vendor_ref_name
+      - sales_term_ref_value
+      - ap_account_ref_value
+      - ap_account_ref_name
+      - currency_ref_value
+      - currency_ref_name
+      - vendor_addr_id
+      - vendor_addr_line1
+      - vendor_addr_city
+      - vendor_addr_country_sub_division_code
+      - vendor_addr_postal_code
+      - vendor_addr_lat
+      - vendor_addr_long
+      - meta_data_create_time
+      - meta_data_last_modified_by_ref_value
+      - meta_data_last_updated_time
+    synonyms:
+      bill: [vendor bill, vendor invoice, ap bill, accounts payable]
+    dimensions:
+      - id
+      - txn_date
+      - due_date
+      - vendor_ref_value
+      - vendor_ref_name
+      - sales_term_ref_value
+      - ap_account_ref_value
+      - currency_ref_value
+    measures:
+      - total_amt
+      - balance
+
+  # ──────────────────────────────────────────────
+  # Entity: BillPayment
+  # ──────────────────────────────────────────────
+  BillPayment:
+    fields:
+      - id
+      - sync_token
+      - domain
+      - sparse
+      - doc_number
+      - txn_date
+      - total_amt
+      - pay_type
+      - vendor_ref_value
+      - vendor_ref_name
+      - currency_ref_value
+      - currency_ref_name
+      - check_payment_bank_account_ref_value
+      - check_payment_bank_account_ref_name
+      - check_payment_print_status
+      - credit_card_payment_cc_account_ref_value
+      - credit_card_payment_cc_account_ref_name
+      - meta_data_create_time
+      - meta_data_last_updated_time
+    synonyms:
+      bill payment: [vendor payment, ap payment, pay bill]
+    dimensions:
+      - id
+      - doc_number
+      - txn_date
+      - pay_type
+      - vendor_ref_value
+      - vendor_ref_name
+      - currency_ref_value
+      - check_payment_bank_account_ref_value
+      - credit_card_payment_cc_account_ref_value
+    measures:
+      - total_amt
+
+  # ──────────────────────────────────────────────
+  # Entity: PurchaseOrder
+  # ──────────────────────────────────────────────
+  PurchaseOrder:
+    fields:
+      - id
+      - sync_token
+      - domain
+      - sparse
+      - doc_number
+      - txn_date
+      - total_amt
+      - po_status
+      - email_status
+      - vendor_ref_value
+      - vendor_ref_name
+      - ap_account_ref_value
+      - ap_account_ref_name
+      - currency_ref_value
+      - currency_ref_name
+      - vendor_addr_id
+      - vendor_addr_line1
+      - vendor_addr_line2
+      - vendor_addr_line3
+      - vendor_addr_line4
+      - vendor_addr_lat
+      - vendor_addr_long
+      - ship_addr_id
+      - ship_addr_line1
+      - ship_addr_line2
+      - ship_addr_line3
+      - ship_addr_lat
+      - ship_addr_long
+      - meta_data_create_time
+      - meta_data_last_modified_by_ref_value
+      - meta_data_last_updated_time
+    synonyms:
+      purchase order: [po, order to vendor]
+    dimensions:
+      - id
+      - doc_number
+      - txn_date
+      - po_status
+      - email_status
+      - vendor_ref_value
+      - vendor_ref_name
+      - ap_account_ref_value
+      - currency_ref_value
+    measures:
+      - total_amt
+
+  # ──────────────────────────────────────────────
+  # Entity: Purchase (Expense)
+  # ──────────────────────────────────────────────
+  Purchase:
+    fields:
+      - id
+      - sync_token
+      - domain
+      - sparse
+      - txn_date
+      - total_amt
+      - payment_type
+      - credit
+      - account_ref_value
+      - account_ref_name
+      - entity_ref_value
+      - entity_ref_name
+      - entity_ref_type
+      - private_note
+      - currency_ref_value
+      - currency_ref_name
+      - meta_data_create_time
+      - meta_data_last_updated_time
+    synonyms:
+      purchase: [expense, expenditure, spend, charge]
+    dimensions:
+      - id
+      - txn_date
+      - payment_type
+      - credit
+      - account_ref_value
+      - account_ref_name
+      - entity_ref_value
+      - entity_ref_name
+      - entity_ref_type
+      - currency_ref_value
+    measures:
+      - total_amt
+
+  # ──────────────────────────────────────────────
+  # Entity: Deposit
+  # ──────────────────────────────────────────────
+  Deposit:
+    fields:
+      - id
+      - sync_token
+      - domain
+      - sparse
+      - txn_date
+      - total_amt
+      - deposit_to_account_ref_value
+      - deposit_to_account_ref_name
+      - cash_back_account_ref_value
+      - cash_back_account_ref_name
+      - cash_back_amount
+      - cash_back_memo
+      - private_note
+      - currency_ref_value
+      - currency_ref_name
+      - meta_data_create_time
+      - meta_data_last_updated_time
+    synonyms:
+      deposit: [bank deposit, bank transaction]
+    dimensions:
+      - id
+      - txn_date
+      - deposit_to_account_ref_value
+      - deposit_to_account_ref_name
+      - cash_back_account_ref_value
+      - currency_ref_value
+    measures:
+      - total_amt
+      - cash_back_amount
+
+  # ──────────────────────────────────────────────
+  # Entity: JournalEntry
+  # ──────────────────────────────────────────────
+  JournalEntry:
+    fields:
+      - id
+      - sync_token
+      - domain
+      - sparse
+      - txn_date
+      - total_amt
+      - adjustment
+      - private_note
+      - currency_ref_value
+      - currency_ref_name
+      - meta_data_create_time
+      - meta_data_last_updated_time
+    synonyms:
+      journal entry: [journal, je, manual entry, adjusting entry]
+    dimensions:
+      - id
+      - txn_date
+      - adjustment
+      - currency_ref_value
+    measures:
+      - total_amt
+
+  # ──────────────────────────────────────────────
+  # Entity: RefundReceipt
+  # ──────────────────────────────────────────────
+  RefundReceipt:
+    fields:
+      - id
+      - sync_token
+      - domain
+      - sparse
+      - doc_number
+      - txn_date
+      - total_amt
+      - balance
+      - customer_ref_value
+      - customer_ref_name
+      - customer_memo_value
+      - bill_email_address
+      - print_status
+      - payment_method_ref_value
+      - payment_method_ref_name
+      - deposit_to_account_ref_value
+      - deposit_to_account_ref_name
+      - currency_ref_value
+      - currency_ref_name
+      - txn_tax_detail_total_tax
+      - apply_tax_after_discount
+      - free_form_address
+      - bill_addr_id
+      - bill_addr_line1
+      - bill_addr_line2
+      - bill_addr_line3
+      - bill_addr_line4
+      - bill_addr_lat
+      - bill_addr_long
+      - meta_data_create_time
+      - meta_data_last_updated_time
+    synonyms:
+      refund receipt: [refund, customer refund]
+    dimensions:
+      - id
+      - doc_number
+      - txn_date
+      - customer_ref_value
+      - customer_ref_name
+      - payment_method_ref_value
+      - deposit_to_account_ref_value
+      - print_status
+      - currency_ref_value
+    measures:
+      - total_amt
+      - balance
+      - txn_tax_detail_total_tax
+
+  # ──────────────────────────────────────────────
+  # Entity: TimeActivity
+  # ──────────────────────────────────────────────
+  TimeActivity:
+    fields:
+      - id
+      - sync_token
+      - domain
+      - sparse
+      - txn_date
+      - name_of
+      - employee_ref_value
+      - employee_ref_name
+      - customer_ref_value
+      - customer_ref_name
+      - item_ref_value
+      - item_ref_name
+      - description
+      - billable_status
+      - taxable
+      - hourly_rate
+      - cost_rate
+      - hours
+      - minutes
+      - seconds
+      - time_charge_id
+      - meta_data_create_time
+      - meta_data_last_updated_time
+    synonyms:
+      time activity: [time entry, timesheet, time tracking, hours worked]
+    dimensions:
+      - id
+      - txn_date
+      - name_of
+      - employee_ref_value
+      - employee_ref_name
+      - customer_ref_value
+      - customer_ref_name
+      - item_ref_value
+      - item_ref_name
+      - billable_status
+      - taxable
+    measures:
+      - hours
+      - minutes
+      - seconds
+      - hourly_rate
+      - cost_rate
+
+  # ──────────────────────────────────────────────
+  # Reference Entities
+  # ──────────────────────────────────────────────
+  Term:
+    fields:
+      - id
+      - sync_token
+      - domain
+      - sparse
+      - name
+      - type
+      - active
+      - due_days
+      - discount_days
+      - meta_data_create_time
+      - meta_data_last_modified_by_ref_value
+      - meta_data_last_updated_time
+    synonyms:
+      term: [payment term, net days, due date terms]
+    dimensions:
+      - id
+      - name
+      - type
+      - active
+    measures:
+      - due_days
+      - discount_days
+
+  PaymentMethod:
+    fields:
+      - id
+      - sync_token
+      - domain
+      - sparse
+      - name
+      - type
+      - active
+      - meta_data_create_time
+      - meta_data_last_updated_time
+    synonyms:
+      payment method: [payment type, method of payment]
+    dimensions:
+      - id
+      - name
+      - type
+      - active
+
+  TaxAgency:
+    fields:
+      - id
+      - sync_token
+      - domain
+      - sparse
+      - display_name
+      - tax_tracked_on_sales
+      - tax_tracked_on_purchases
+      - tax_agency_config
+      - meta_data_create_time
+      - meta_data_last_updated_time
+    synonyms:
+      tax agency: [tax authority, revenue department]
+    dimensions:
+      - id
+      - display_name
+      - tax_tracked_on_sales
+      - tax_tracked_on_purchases
+      - tax_agency_config
+
+  TaxRate:
+    fields:
+      - id
+      - sync_token
+      - domain
+      - sparse
+      - name
+      - description
+      - active
+      - rate_value
+      - agency_ref_value
+      - special_tax_type
+      - display_type
+      - meta_data_create_time
+      - meta_data_last_updated_time
+    synonyms:
+      tax rate: [tax percentage, sales tax rate]
+    dimensions:
+      - id
+      - name
+      - active
+      - agency_ref_value
+      - special_tax_type
+      - display_type
+    measures:
+      - rate_value
+
+  TaxCode:
+    fields:
+      - id
+      - sync_token
+      - domain
+      - sparse
+      - name
+      - description
+      - taxable
+      - tax_group
+      - active
+      - hidden
+      - tax_code_config_type
+      - meta_data_create_time
+      - meta_data_last_updated_time
+    synonyms:
+      tax code: [tax category, tax classification]
+    dimensions:
+      - id
+      - name
+      - taxable
+      - tax_group
+      - active
+      - hidden
+      - tax_code_config_type
+
+  Department:
+    fields:
+      - id
+      - sync_token
+      - domain
+      - sparse
+      - name
+      - fully_qualified_name
+      - sub_department
+      - active
+      - meta_data_create_time
+      - meta_data_last_updated_time
+    synonyms:
+      department: [dept, division, business unit]
+    dimensions:
+      - id
+      - name
+      - fully_qualified_name
+      - sub_department
+      - active
+
+  CompanyInfo:
+    fields:
+      - id
+      - sync_token
+      - domain
+      - sparse
+      - company_name
+      - legal_name
+      - company_start_date
+      - fiscal_year_start_month
+      - country
+      - email_address
+      - supported_languages
+      - default_time_zone
+      - company_addr_id
+      - company_addr_line1
+      - company_addr_city
+      - company_addr_country_sub_division_code
+      - company_addr_postal_code
+      - legal_addr_id
+      - legal_addr_line1
+      - legal_addr_city
+      - legal_addr_country_sub_division_code
+      - legal_addr_postal_code
+      - customer_communication_addr_id
+      - customer_communication_addr_line1
+      - customer_communication_addr_city
+      - customer_communication_addr_country_sub_division_code
+      - customer_communication_addr_postal_code
+      - customer_communication_email_addr_address
+      - meta_data_create_time
+      - meta_data_last_updated_time
+    dimensions:
+      - id
+      - company_name
+      - legal_name
+      - country
+      - fiscal_year_start_month
+      - default_time_zone
+      - supported_languages
+
+  ExchangeRate:
+    fields:
+      - source_currency_code
+      - target_currency_code
+      - rate
+      - as_of_date
+      - meta_data_last_updated_time
+    dimensions:
+      - source_currency_code
+      - target_currency_code
+      - as_of_date
+    measures:
+      - rate
+
+  Preferences:
+    fields:
+      - id
+      - sync_token
+      - domain
+      - sparse
+      - accounting_info_prefs_use_account_numbers
+      - accounting_info_prefs_track_departments
+      - accounting_info_prefs_class_tracking_per_txn
+      - accounting_info_prefs_class_tracking_per_txn_line
+      - accounting_info_prefs_first_month_of_fiscal_year
+      - accounting_info_prefs_tax_year_month
+      - accounting_info_prefs_tax_form
+      - accounting_info_prefs_customer_terminology
+      - product_and_services_prefs_for_sales
+      - product_and_services_prefs_for_purchase
+      - product_and_services_prefs_quantity_with_price_and_rate
+      - product_and_services_prefs_quantity_on_hand
+      - product_and_services_prefs_revenue_recognition
+      - product_and_services_prefs_revenue_recognition_frequency
+      - sales_forms_prefs_using_progress_invoicing
+      - sales_forms_prefs_custom_txn_numbers
+      - sales_forms_prefs_email_copy_to_company
+      - sales_forms_prefs_allow_deposit
+      - sales_forms_prefs_allow_discount
+      - sales_forms_prefs_default_discount_account
+      - sales_forms_prefs_allow_estimates
+      - sales_forms_prefs_e_transaction_enabled_status
+      - sales_forms_prefs_e_transaction_attach_pdf
+      - sales_forms_prefs_e_transaction_payment_enabled
+      - sales_forms_prefs_ipn_support_enabled
+      - sales_forms_prefs_allow_service_date
+      - sales_forms_prefs_allow_shipping
+      - sales_forms_prefs_default_terms_value
+      - sales_forms_prefs_auto_apply_credit
+      - sales_forms_prefs_auto_apply_payments
+      - sales_forms_prefs_using_price_levels
+      - sales_forms_prefs_default_customer_message
+      - email_messages_prefs_invoice_message_subject
+      - email_messages_prefs_invoice_message_message
+      - email_messages_prefs_estimate_message_subject
+      - email_messages_prefs_estimate_message_message
+      - email_messages_prefs_sales_receipt_message_subject
+      - email_messages_prefs_sales_receipt_message_message
+      - email_messages_prefs_statement_message_subject
+      - email_messages_prefs_statement_message_message
+      - vendor_and_purchases_prefs_tracking_by_customer
+      - vendor_and_purchases_prefs_billable_expense_tracking
+      - time_tracking_prefs_use_services
+      - time_tracking_prefs_default_time_item_value
+      - time_tracking_prefs_bill_customers
+      - time_tracking_prefs_show_bill_rate_to_all
+      - time_tracking_prefs_work_week_start_date
+      - time_tracking_prefs_mark_time_entries_billable
+      - tax_prefs_using_sales_tax
+      - tax_prefs_tax_group_code_ref_value
+      - currency_prefs_multi_currency_enabled
+      - currency_prefs_home_currency_value
+      - report_prefs_report_basis
+      - report_prefs_calc_aging_report_from_txn_date
+      - meta_data_create_time
+      - meta_data_last_updated_time
+
+  # Empty entities (no data returned from cache)
+  VendorCredit:
+    fields: []
+    synonyms:
+      vendor credit: [vendor refund, ap credit]
+
+  Transfer:
+    fields: []
+    synonyms:
+      transfer: [bank transfer, fund transfer]
+
+  Class:
+    fields: []
+    synonyms:
+      class: [cost center, project class, tracking class]
+
+  Budget:
+    fields: []
+    synonyms:
+      budget: [financial budget, annual budget]
+
+  Attachable:
+    fields: []
+    synonyms:
+      attachable: [attachment, document, file]
+
+# ──────────────────────────────────────────────
+# Flattened fields (for splitter/orchestrator metadata merging)
+# Uses actual cache snake_case column names
+# ──────────────────────────────────────────────
+fields:
+  # Account
+  account_id: id
+  account_name: name
+  account_type: account_type
+  account_classification: classification
+  account_balance: current_balance
+  # Customer
+  customer_id: id
+  customer_name: display_name
+  customer_company: company_name
+  customer_email: primary_email_addr_address
+  customer_balance: balance
+  customer_taxable: taxable
+  # Vendor
+  vendor_id: id
+  vendor_name: display_name
+  vendor_balance: balance
+  vendor_1099: vendor1099
+  # Employee
+  employee_id: id
+  employee_name: display_name
+  # Item
+  item_id: id
+  item_name: name
+  item_type: type
+  item_price: unit_price
+  # Invoice
+  invoice_id: id
+  invoice_number: doc_number
+  invoice_date: txn_date
+  invoice_due_date: due_date
+  invoice_total: total_amt
+  invoice_balance: balance
+  invoice_customer: customer_ref_name
+  # Estimate
+  estimate_id: id
+  estimate_total: total_amt
+  estimate_status: txn_status
+  # Bill
+  bill_id: id
+  bill_date: txn_date
+  bill_due_date: due_date
+  bill_total: total_amt
+  bill_balance: balance
+  bill_vendor: vendor_ref_name
+  # Payment
+  payment_id: id
+  payment_date: txn_date
+  payment_amount: total_amt
+  payment_customer: customer_ref_name
+  # Purchase
+  purchase_total: total_amt
+  purchase_type: payment_type
+  # Deposit
+  deposit_total: total_amt
+  deposit_account: deposit_to_account_ref_name
+  # Time
+  time_hours: hours
+  time_rate: hourly_rate
+  time_employee: employee_ref_name
+  time_customer: customer_ref_name
+
+# ──────────────────────────────────────────────
+# Relationships (entity cross-references)
+# ──────────────────────────────────────────────
+relationships:
+  - from: Invoice
+    to: Customer
+    via: customer_ref_value
+    type: many_to_one
+  - from: Invoice
+    to: Term
+    via: sales_term_ref_value
+    type: many_to_one
+  - from: Estimate
+    to: Customer
+    via: customer_ref_value
+    type: many_to_one
+  - from: Estimate
+    to: Invoice
+    via: linked_txn
+    type: one_to_one
+  - from: Payment
+    to: Customer
+    via: customer_ref_value
+    type: many_to_one
+  - from: Payment
+    to: Invoice
+    via: line_linked_txn
+    type: many_to_many
+  - from: Payment
+    to: Deposit
+    via: linked_txn
+    type: many_to_one
+  - from: SalesReceipt
+    to: Customer
+    via: customer_ref_value
+    type: many_to_one
+  - from: SalesReceipt
+    to: Deposit
+    via: linked_txn
+    type: many_to_one
+  - from: CreditMemo
+    to: Customer
+    via: customer_ref_value
+    type: many_to_one
+  - from: RefundReceipt
+    to: Customer
+    via: customer_ref_value
+    type: many_to_one
+  - from: Bill
+    to: Vendor
+    via: vendor_ref_value
+    type: many_to_one
+  - from: Bill
+    to: Account
+    via: ap_account_ref_value
+    type: many_to_one
+  - from: BillPayment
+    to: Vendor
+    via: vendor_ref_value
+    type: many_to_one
+  - from: BillPayment
+    to: Bill
+    via: line_linked_txn
+    type: many_to_many
+  - from: PurchaseOrder
+    to: Vendor
+    via: vendor_ref_value
+    type: many_to_one
+  - from: PurchaseOrder
+    to: Bill
+    via: linked_txn
+    type: one_to_one
+  - from: Purchase
+    to: Account
+    via: account_ref_value
+    type: many_to_one
+  - from: Purchase
+    to: Vendor
+    via: entity_ref_value
+    type: many_to_one
+  - from: Deposit
+    to: Account
+    via: deposit_to_account_ref_value
+    type: many_to_one
+  - from: JournalEntry
+    to: Account
+    via: line_journal_entry_line_detail_account_ref_value
+    type: many_to_many
+  - from: TimeActivity
+    to: Employee
+    via: employee_ref_value
+    type: many_to_one
+  - from: TimeActivity
+    to: Customer
+    via: customer_ref_value
+    type: many_to_one
+  - from: TimeActivity
+    to: Item
+    via: item_ref_value
+    type: many_to_one
+  - from: Item
+    to: Account
+    via: income_account_ref_value
+    type: many_to_one
+  - from: TaxRate
+    to: TaxAgency
+    via: agency_ref_value
+    type: many_to_one
+
+# ──────────────────────────────────────────────
+# Synonyms (merged into splitter metadata)
+# ──────────────────────────────────────────────
+synonyms:
+  invoice: [sales invoice, customer invoice, bill to customer, ar invoice]
+  bill: [vendor bill, ap bill, vendor invoice, accounts payable]
+  payment: [customer payment, payment received, cash receipt]
+  bill payment: [vendor payment, pay bill, ap payment]
+  purchase: [expense, expenditure, spend, charge]
+  deposit: [bank deposit, bank transaction]
+  estimate: [quote, proposal, bid]
+  credit memo: [credit note, customer credit]
+  refund: [refund receipt, customer refund]
+  sales receipt: [cash sale, pos sale, receipt]
+  purchase order: [po, order to vendor]
+  journal entry: [journal, je, adjusting entry]
+  time activity: [timesheet, time entry, hours worked, time tracking]
+  customer: [client, buyer, purchaser]
+  vendor: [supplier, provider, seller]
+  employee: [worker, staff, team member]
+  item: [product, service, sku, merchandise]
+  account: [gl account, ledger account, chart of accounts, coa]
+  total amount: [total, amount, sum, invoice total, bill total]
+  balance: [open balance, outstanding, amount due, unpaid]
+  overdue: [past due, late, delinquent]
+  tax: [sales tax, tax rate, tax code, tax amount]
+  department: [dept, division, business unit]
+  payment method: [payment type, method of payment]
+  payment terms: [net days, term, due date terms]
+
+# ──────────────────────────────────────────────
+# Query hints (QuickBooks IDS query examples)
+# ──────────────────────────────────────────────
+query_hints:
+  select_all_customers: |
+    select * from Customer startposition 1 maxresults 100
+  select_open_invoices: |
+    select * from Invoice where balance > '0' startposition 1 maxresults 100
+  select_overdue_invoices: |
+    select * from Invoice where due_date < '2026-03-14' and balance > '0'
+  select_unpaid_bills: |
+    select * from Bill where balance > '0' startposition 1 maxresults 100
+  select_items: |
+    select * from Item startposition 1 maxresults 100
+  select_expenses_by_vendor: |
+    select * from Purchase startposition 1 maxresults 100
+  select_time_by_employee: |
+    select * from TimeActivity startposition 1 maxresults 100
+
+# ──────────────────────────────────────────────
+# Metrics
+# ──────────────────────────────────────────────
+metrics:
+  total_revenue:
+    definition: "Sum of total_amt across all Invoices"
+  total_expenses:
+    definition: "Sum of total_amt across all Bills and Purchases"
+  accounts_receivable:
+    definition: "Sum of balance across all Invoices where balance > 0"
+  accounts_payable:
+    definition: "Sum of balance across all Bills where balance > 0"
+  net_income:
+    definition: "Total Revenue minus Total Expenses"
+  customer_count:
+    definition: "Count of active Customers"
+  vendor_count:
+    definition: "Count of active Vendors"
+  overdue_invoices:
+    definition: "Invoices where due_date < today and balance > 0"
+  billable_hours:
+    definition: "Sum of hours from TimeActivity where billable_status is Billable"
+
+meta:
+  source_type: "api"
+  source_api: "QuickBooks Online IDS Query API"
+  api_base: "http://localhost:8080/api/query"
+  reports_api_base: "http://localhost:8080/api/reports"
+  notes:
+    - "Data is fetched via QuickBooks IDS query API, not from a local file."
+    - "Each entity maps to a QuickBooks IDS queryable resource."
+    - "Relationships are established via _ref_value fields (e.g., customer_ref_value)."
+    - "Line items within transactions contain nested detail (sales_item_line_detail, account_based_expense_line_detail)."
+    - "Reports are fetched via GET /api/reports/{reportName} — use query params for date/filter."
+    - "All field names in this file use actual Hazelcast cache snake_case column names."
+
+# ──────────────────────────────────────────────
+# Reports (live data from GET /api/reports/{name})
+# All reports return: Header, Columns, Rows
+# ──────────────────────────────────────────────
+reports:

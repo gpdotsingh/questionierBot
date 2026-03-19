@@ -15,4 +15,5 @@ if __name__ == "__main__":
         embedding_model="all-MiniLM-L6-v2",
         chunk_size=1000,
         chunk_overlap=200,
+        semantics_yaml_path="data/quickbooks_semantics.yaml",
     )

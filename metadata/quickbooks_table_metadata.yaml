@@ -1,0 +1,234 @@
+# Condensed table metadata for the Splitter.
+# Contains entity descriptions, key columns, synonyms, and relationships.
+# For full field details (types, valid_values), see the vector database
+# which is built from data/quickbooks_semantics.yaml.
+
+entities:
+  # ── Master Entities ──
+  Account:
+    description: "Chart of Accounts — GL accounts with balances and classifications"
+    key_columns: [id, name, account_type, classification, current_balance, active, sub_account, parent_ref_value]
+    synonyms: [chart of accounts, ledger account, GL account, coa]
+    relationships:
+      - {to: Bill, via: ap_account_ref_value, type: one_to_many}
+      - {to: Purchase, via: account_ref_value, type: one_to_many}
+      - {to: Deposit, via: deposit_to_account_ref_value, type: one_to_many}
+      - {to: Item, via: income_account_ref_value, type: one_to_many}
+
+  Customer:
+    description: "Clients/buyers who purchase goods or services"
+    key_columns: [id, display_name, company_name, balance, active, primary_email_addr_address, bill_addr_city]
+    synonyms: [client, buyer, purchaser]
+    relationships:
+      - {to: Invoice, via: customer_ref_value, type: one_to_many}
+      - {to: Estimate, via: customer_ref_value, type: one_to_many}
+      - {to: Payment, via: customer_ref_value, type: one_to_many}
+      - {to: SalesReceipt, via: customer_ref_value, type: one_to_many}
+      - {to: CreditMemo, via: customer_ref_value, type: one_to_many}
+      - {to: RefundReceipt, via: customer_ref_value, type: one_to_many}
+      - {to: TimeActivity, via: customer_ref_value, type: one_to_many}
+
+  Vendor:
+    description: "Suppliers/providers from whom you purchase goods or services"
+    key_columns: [id, display_name, company_name, balance, active, primary_email_addr_address]
+    synonyms: [supplier, provider, seller]
+    relationships:
+      - {to: Bill, via: vendor_ref_value, type: one_to_many}
+      - {to: BillPayment, via: vendor_ref_value, type: one_to_many}
+      - {to: PurchaseOrder, via: vendor_ref_value, type: one_to_many}
+      - {to: Purchase, via: entity_ref_value, type: one_to_many}
+
+  Employee:
+    description: "Workers/staff members who may track time"
+    key_columns: [id, display_name, given_name, family_name, active, billable_time, hired_date]
+    synonyms: [worker, staff, team member]
+    relationships:
+      - {to: TimeActivity, via: employee_ref_value, type: one_to_many}
+
+  Item:
+    description: "Products and services that can be sold or purchased"
+    key_columns: [id, name, type, unit_price, active, taxable, purchase_cost]
+    synonyms: [product, service, sku, merchandise]
+    relationships:
+      - {to: Account, via: income_account_ref_value, type: many_to_one}
+      - {to: TimeActivity, via: item_ref_value, type: one_to_many}
+
+  # ── Transaction Entities ──
+  Invoice:
+    description: "Sales invoices sent to customers — tracks amounts, dates, and balances"
+    key_columns: [id, doc_number, txn_date, due_date, total_amt, balance, customer_ref_value, customer_ref_name, email_status]
+    synonyms: [sales invoice, customer invoice, bill to customer, ar invoice]
+    relationships:
+      - {to: Customer, via: customer_ref_value, type: many_to_one}
+      - {to: Term, via: sales_term_ref_value, type: many_to_one}
+
+  Estimate:
+    description: "Quotes/proposals sent to customers before invoicing"
+    key_columns: [id, doc_number, txn_date, total_amt, txn_status, customer_ref_value, customer_ref_name]
+    synonyms: [quote, proposal, bid]
+    relationships:
+      - {to: Customer, via: customer_ref_value, type: many_to_one}
+
+  SalesReceipt:
+    description: "Cash sales / point-of-sale transactions (paid immediately)"
+    key_columns: [id, doc_number, txn_date, total_amt, balance, customer_ref_value, customer_ref_name, payment_method_ref_value]
+    synonyms: [cash sale, receipt, pos sale]
+    relationships:
+      - {to: Customer, via: customer_ref_value, type: many_to_one}
+      - {to: Deposit, via: linked_txn, type: many_to_one}
+
+  CreditMemo:
+    description: "Credit notes issued to customers (reduces amount owed)"
+    key_columns: [id, doc_number, txn_date, total_amt, balance, remaining_credit, customer_ref_value, customer_ref_name]
+    synonyms: [credit note, customer credit, credit]
+    relationships:
+      - {to: Customer, via: customer_ref_value, type: many_to_one}
+
+  Payment:
+    description: "Payments received from customers against invoices"
+    key_columns: [id, txn_date, total_amt, unapplied_amt, customer_ref_value, customer_ref_name, payment_method_ref_value]
+    synonyms: [customer payment, payment received, cash receipt]
+    relationships:
+      - {to: Customer, via: customer_ref_value, type: many_to_one}
+      - {to: Invoice, via: line_linked_txn, type: many_to_many}
+      - {to: Deposit, via: linked_txn, type: many_to_one}
+
+  Bill:
+    description: "Vendor bills / accounts payable — amounts owed to vendors"
+    key_columns: [id, txn_date, due_date, total_amt, balance, vendor_ref_value, vendor_ref_name]
+    synonyms: [vendor bill, vendor invoice, ap bill, accounts payable]
+    relationships:
+      - {to: Vendor, via: vendor_ref_value, type: many_to_one}
+      - {to: Account, via: ap_account_ref_value, type: many_to_one}
+
+  BillPayment:
+    description: "Payments made to vendors against bills"
+    key_columns: [id, doc_number, txn_date, total_amt, pay_type, vendor_ref_value, vendor_ref_name]
+    synonyms: [vendor payment, ap payment, pay bill]
+    relationships:
+      - {to: Vendor, via: vendor_ref_value, type: many_to_one}
+      - {to: Bill, via: line_linked_txn, type: many_to_many}
+
+  PurchaseOrder:
+    description: "Purchase orders sent to vendors (not yet billed)"
+    key_columns: [id, doc_number, txn_date, total_amt, po_status, vendor_ref_value, vendor_ref_name]
+    synonyms: [po, order to vendor]
+    relationships:
+      - {to: Vendor, via: vendor_ref_value, type: many_to_one}
+      - {to: Bill, via: linked_txn, type: one_to_one}
+
+  Purchase:
+    description: "Expense transactions (checks, credit card charges, cash)"
+    key_columns: [id, txn_date, total_amt, payment_type, account_ref_value, account_ref_name, entity_ref_value, entity_ref_name]
+    synonyms: [expense, expenditure, spend, charge]
+    relationships:
+      - {to: Account, via: account_ref_value, type: many_to_one}
+      - {to: Vendor, via: entity_ref_value, type: many_to_one}
+
+  Deposit:
+    description: "Bank deposits — money deposited into bank accounts"
+    key_columns: [id, txn_date, total_amt, deposit_to_account_ref_value, deposit_to_account_ref_name]
+    synonyms: [bank deposit, bank transaction]
+    relationships:
+      - {to: Account, via: deposit_to_account_ref_value, type: many_to_one}
+
+  JournalEntry:
+    description: "Manual journal entries / adjusting entries"
+    key_columns: [id, txn_date, total_amt, adjustment]
+    synonyms: [journal, je, manual entry, adjusting entry]
+    relationships:
+      - {to: Account, via: line_journal_entry_line_detail_account_ref_value, type: many_to_many}
+
+  RefundReceipt:
+    description: "Refunds issued to customers"
+    key_columns: [id, doc_number, txn_date, total_amt, balance, customer_ref_value, customer_ref_name]
+    synonyms: [refund, customer refund]
+    relationships:
+      - {to: Customer, via: customer_ref_value, type: many_to_one}
+
+  TimeActivity:
+    description: "Time tracking entries — hours worked by employees for customers"
+    key_columns: [id, txn_date, hours, minutes, hourly_rate, employee_ref_value, employee_ref_name, customer_ref_value, customer_ref_name, billable_status]
+    synonyms: [time entry, timesheet, time tracking, hours worked]
+    relationships:
+      - {to: Employee, via: employee_ref_value, type: many_to_one}
+      - {to: Customer, via: customer_ref_value, type: many_to_one}
+      - {to: Item, via: item_ref_value, type: many_to_one}
+
+  # ── Reference Entities ──
+  Term:
+    description: "Payment terms (e.g., Net 30, Due on receipt)"
+    key_columns: [id, name, type, active, due_days]
+    synonyms: [payment term, net days, due date terms]
+    relationships: []
+
+  PaymentMethod:
+    description: "Payment method types (credit card, check, etc.)"
+    key_columns: [id, name, type, active]
+    synonyms: [payment type, method of payment]
+    relationships: []
+
+  TaxAgency:
+    description: "Tax authorities that collect taxes"
+    key_columns: [id, display_name, tax_tracked_on_sales, tax_tracked_on_purchases]
+    synonyms: [tax authority, revenue department]
+    relationships: []
+
+  TaxRate:
+    description: "Tax rates and percentages"
+    key_columns: [id, name, rate_value, active, agency_ref_value]
+    synonyms: [tax percentage, sales tax rate]
+    relationships:
+      - {to: TaxAgency, via: agency_ref_value, type: many_to_one}
+
+  TaxCode:
+    description: "Tax codes/categories applied to transactions"
+    key_columns: [id, name, taxable, tax_group, active]
+    synonyms: [tax category, tax classification]
+    relationships: []
+
+  Department:
+    description: "Departments/divisions for tracking"
+    key_columns: [id, name, fully_qualified_name, active]
+    synonyms: [dept, division, business unit]
+    relationships: []
+
+  CompanyInfo:
+    description: "Company-level information and settings"
+    key_columns: [id, company_name, legal_name, country, fiscal_year_start_month]
+    synonyms: [company, organization]
+    relationships: []
+
+  ExchangeRate:
+    description: "Currency exchange rates"
+    key_columns: [source_currency_code, target_currency_code, rate, as_of_date]
+    synonyms: [currency rate, forex rate]
+    relationships: []
+
+# ── Global Synonyms ──
+synonyms:
+  invoice: [sales invoice, customer invoice, bill to customer, ar invoice]
+  bill: [vendor bill, ap bill, vendor invoice, accounts payable]
+  payment: [customer payment, payment received, cash receipt]
+  bill payment: [vendor payment, pay bill, ap payment]
+  purchase: [expense, expenditure, spend, charge]
+  deposit: [bank deposit, bank transaction]
+  estimate: [quote, proposal, bid]
+  credit memo: [credit note, customer credit]
+  refund: [refund receipt, customer refund]
+  sales receipt: [cash sale, pos sale, receipt]
+  purchase order: [po, order to vendor]
+  journal entry: [journal, je, adjusting entry]
+  time activity: [timesheet, time entry, hours worked, time tracking]
+  customer: [client, buyer, purchaser]
+  vendor: [supplier, provider, seller]
+  employee: [worker, staff, team member]
+  item: [product, service, sku, merchandise]
+  account: [gl account, ledger account, chart of accounts, coa]
+  total amount: [total, amount, sum, invoice total, bill total]
+  balance: [open balance, outstanding, amount due, unpaid]
+  overdue: [past due, late, delinquent]
+  tax: [sales tax, tax rate, tax code, tax amount]
+  department: [dept, division, business unit]
+  payment method: [payment type, method of payment]
+  payment terms: [net days, term, due date terms]

@@ -8,7 +8,7 @@ from .settings import ensure_env_loaded
 
 ensure_env_loaded()
 
-# ---------- YAML metadata ----------∏
+# ---------- YAML metadata ----------
 try:
     import yaml
 except Exception:
@@ -29,7 +29,10 @@ def _norm(s: str) -> str:
 
 def _pack_nodes(nodes: List[Dict[str, Any]]) -> Dict[str, Any]:
     def pack(n: Dict[str, Any]) -> Dict[str, Any]:
-        return {n["id"]: {"text": n["text"], "children": [pack(c) for c in n.get("children", [])]}}
+        node_data: Dict[str, Any] = {"text": n["text"], "children": [pack(c) for c in n.get("children", [])]}
+        if n.get("entities"):
+            node_data["entities"] = n["entities"]
+        return {n["id"]: node_data}
     out: Dict[str, Any] = {}
     for n in nodes:
         out.update(pack(n))
@@ -45,13 +48,17 @@ class _LLMRouter(LLMRouterBase):
             "You are a planner that splits a user question into Q-steps.\n"
             "Emit ONLY JSON in this EXACT shape, no prose:\n"
             "{\n"
-            "  \"Q1\": {\"text\": \"...\", \"children\": [ {\"Q2\": {\"text\": \"...\", \"children\": []}}, {\"Q3\": {\"text\": \"...\", \"children\": []}} ]},\n"
-            "  \"Q4\": {\"text\": \"...\", \"children\": []}\n"
+            "  \"Q1\": {\"text\": \"...\", \"entities\": [\"Invoice\", \"Customer\"], \"children\": [\n"
+            "    {\"Q2\": {\"text\": \"...\", \"entities\": [\"Customer\"], \"children\": []}}\n"
+            "  ]},\n"
+            "  \"Q3\": {\"text\": \"...\", \"entities\": [\"Bill\"], \"children\": []}\n"
             "}\n"
             "Rules:\n"
             "- Use brief, executable texts per node.\n"
+            "- CRITICAL: Each node MUST include an \"entities\" array listing the QuickBooks entity name(s) "
+            "that the sub-query should use. Use the exact entity names from the Metadata.\n"
             "- If a sub-question depends on its parent, nest it under parent's children.\n"
-            "- You may create multiple roots (Q1, Q4, ...), or a single root with deep children.\n"
+            "- You may create multiple roots (Q1, Q3, ...), or a single root with deep children.\n"
             "- NEVER add commentary.\n"
             "- Do not include IDs inside texts. IDs are Q1..Qn only.\n"
         )
@@ -72,8 +79,21 @@ class _LLMRouter(LLMRouterBase):
 
     # ask_json provided by LLMRouterBase
 
-def _load_metadata(dirs: Optional[List[str]] = None) -> Dict[str, Any]:
+# ---------- Load table metadata ----------
+TABLE_METADATA_FILE = "quickbooks_table_metadata.yaml"
+
+def _load_table_metadata(dirs: Optional[List[str]] = None) -> Dict[str, Any]:
+    """Load the condensed table metadata (entities, synonyms, relationships)."""
     dirs = dirs or ["metadata", "metadat"]
+    for d in dirs:
+        p = os.path.join(d, TABLE_METADATA_FILE)
+        if os.path.isfile(p) and yaml:
+            try:
+                with open(p, "r") as f:
+                    return yaml.safe_load(f) or {}
+            except Exception:
+                pass
+    # Fallback: load any YAML in metadata dirs (legacy behavior)
     merged: Dict[str, Any] = {"fields": {}, "synonyms": {}}
     for d in dirs:
         if not os.path.isdir(d):
@@ -93,17 +113,40 @@ def _load_metadata(dirs: Optional[List[str]] = None) -> Dict[str, Any]:
                 pass
     return merged
 
-def _metadata_text(meta: Dict[str, Any]) -> str:
+def _table_metadata_text(meta: Dict[str, Any]) -> str:
+    """Format table metadata into a concise text for the LLM prompt."""
     if not meta:
         return ""
     lines: List[str] = []
-    if meta.get("fields"):
-        lines.append("Fields:")
-        for k, v in meta["fields"].items():
-            lines.append(f"- {k}: {v}")
-    if meta.get("synonyms"):
-        lines.append("Synonyms:")
-        for k, vs in meta["synonyms"].items():
+    entities = meta.get("entities") or {}
+    if entities:
+        lines.append("Available Entities:")
+        for name, info in entities.items():
+            if not isinstance(info, dict):
+                continue
+            desc = info.get("description", "")
+            key_cols = info.get("key_columns", [])
+            syns = info.get("synonyms", [])
+            rels = info.get("relationships", [])
+            cols_str = ", ".join(key_cols) if key_cols else ""
+            syns_str = ", ".join(syns) if isinstance(syns, list) else str(syns)
+            line = f"- {name}: {desc}"
+            if cols_str:
+                line += f" | Key columns: {cols_str}"
+            if syns_str:
+                line += f" | Synonyms: {syns_str}"
+            if rels:
+                rel_parts = []
+                for r in rels:
+                    if isinstance(r, dict):
+                        rel_parts.append(f"{r.get('to', '?')} (via {r.get('via', '?')})")
+                if rel_parts:
+                    line += f" | Related to: {', '.join(rel_parts)}"
+            lines.append(line)
+    synonyms = meta.get("synonyms") or {}
+    if synonyms:
+        lines.append("\nGlobal Synonyms:")
+        for k, vs in synonyms.items():
             if isinstance(vs, list):
                 vs = ", ".join(vs)
             lines.append(f"- {k}: {vs}")
@@ -131,7 +174,45 @@ def _vector_terms(query: str, top_k: int = 8, faiss_dir: str = "faiss_store") ->
             seen.add(t2); out.append(t2)
     return out[:20]
 
-def _rule_based_tree(query: str) -> Dict[str, Any]:
+# ---------- Entity inference for rule-based fallback ----------
+def _infer_entities(query: str, meta: Dict[str, Any]) -> List[str]:
+    """Infer entity names from query text using entity names and synonyms."""
+    q_lower = query.lower()
+    entities = meta.get("entities") or {}
+    matched: List[str] = []
+    for name, info in entities.items():
+        if not isinstance(info, dict):
+            continue
+        # Check entity name
+        if name.lower() in q_lower:
+            matched.append(name)
+            continue
+        # Check synonyms
+        syns = info.get("synonyms", [])
+        if isinstance(syns, list):
+            for s in syns:
+                if s.lower() in q_lower:
+                    matched.append(name)
+                    break
+    # Also check global synonyms
+    global_syns = meta.get("synonyms") or {}
+    for key, vals in global_syns.items():
+        if not isinstance(vals, list):
+            continue
+        # Check if any synonym matches the query
+        key_matches = key.lower() in q_lower
+        val_matches = any(v.lower() in q_lower for v in vals)
+        if key_matches or val_matches:
+            # Map the synonym key back to an entity name
+            for ename in entities:
+                e_info = entities[ename]
+                e_syns = e_info.get("synonyms", []) if isinstance(e_info, dict) else []
+                if key.lower() == ename.lower() or key.lower() in [s.lower() for s in e_syns]:
+                    if ename not in matched:
+                        matched.append(ename)
+    return matched if matched else list(entities.keys())[:3]
+
+def _rule_based_tree(query: str, meta: Dict[str, Any] = None) -> Dict[str, Any]:
     q = _norm(query)
     clauses = [c for c in map(_norm, SENT_SPLIT.split(q)) if c]
     root = {"id": "QROOT", "text": q, "children": []}
@@ -140,7 +221,8 @@ def _rule_based_tree(query: str) -> Dict[str, Any]:
     def new_node(text: str) -> Dict[str, Any]:
         nonlocal qid
         qid += 1
-        return {"id": f"Q{qid}", "text": text, "children": []}
+        entities = _infer_entities(text, meta) if meta else []
+        return {"id": f"Q{qid}", "text": text, "entities": entities, "children": []}
     for clause in clauses:
         parts = [p for p in map(_norm, JOINERS.split(clause)) if p]
         if not parts:
@@ -165,11 +247,13 @@ def _rule_based_tree(query: str) -> Dict[str, Any]:
         return {
             "id": f"Q{qid2}",
             "text": n["text"],
+            "entities": n.get("entities", []),
             "children": [walk(c) for c in n.get("children", [])]
         }
     real_roots = [walk(c) for c in root.get("children", [])]
     if not real_roots:
-        real_roots = [{"id": "Q1", "text": q, "children": []}]
+        entities = _infer_entities(q, meta) if meta else []
+        real_roots = [{"id": "Q1", "text": q, "entities": entities, "children": []}]
     return _pack_nodes(real_roots)
 
 def _number_from_llm_dict(llm_dict: dict) -> Dict[str, Any]:
@@ -185,6 +269,7 @@ def _number_from_llm_dict(llm_dict: dict) -> Dict[str, Any]:
         return {
             "id": f"Q{qid}",
             "text": _norm(n.get("text", "")),
+            "entities": n.get("entities", []),
             "children": [renumber(c) for c in (n.get("children") or [])],
         }
     numbered = [renumber(n) for n in nodes]
@@ -193,10 +278,10 @@ def _number_from_llm_dict(llm_dict: dict) -> Dict[str, Any]:
 class QuestionSplitter:
     """
     Wraps original functionality:
-      - Loads metadata
+      - Loads table metadata (condensed entity/synonym/relationship info)
       - Optionally queries LLM (OpenAI/Ollama) with prompt-first strategy
       - Fallback to rule-based decomposition
-      - plan(question) -> Plan (flattened steps)
+      - plan(question) -> Plan (flattened steps with entity names)
     Public signature preserved: __init__(try_llm=True, provider=None, model=None)
     provider/model are ignored (env-driven).
     """
@@ -212,42 +297,15 @@ class QuestionSplitter:
         self.faiss_dir = faiss_dir
         self.metadata_dirs = metadata_dirs or ["metadata", "metadat"]
         self.router = _LLMRouter() if try_llm else None
-        self.meta_cache = _load_metadata(self.metadata_dirs)
-        self.meta_text = _metadata_text(self.meta_cache)
-
-    def _attempt_llm(self, user_query: str, hint_text: str = "") -> Optional[Dict[str, Any]]:
-        if not (self.try_llm and self.router and self.router.provider):
-            return None
-        prompt = _LLMRouter._prompt_header() + "\n" + _LLMRouter._prompt_body(
-            user_query, self.meta_text, hint_text=hint_text
-        )
-        raw = self.router.ask_json(prompt)
-        if isinstance(raw, dict):
-            try:
-                return _number_from_llm_dict(raw)
-            except Exception:
-                pass
-
-        # Retry with vector-derived hints if not already provided
-        vector_hints = " ".join(self._vector_terms(user_query))
-        if vector_hints and vector_hints != hint_text:
-            prompt2 = _LLMRouter._prompt_header() + "\n" + _LLMRouter._prompt_body(
-                user_query, self.meta_text, hint_text=vector_hints
-            )
-            raw2 = self.router.ask_json(prompt2)
-            if isinstance(raw2, dict):
-                try:
-                    return _number_from_llm_dict(raw2)
-                except Exception:
-                    pass
-        return None
+        self.meta_cache = _load_table_metadata(self.metadata_dirs)
+        self.meta_text = _table_metadata_text(self.meta_cache)
 
     def _vector_terms(self, query: str) -> List[str]:
         return _vector_terms(query, top_k=8, faiss_dir=self.faiss_dir)
 
     def _semantic_context(self, query: str, top_k: int = 5) -> Tuple[str, List[str]]:
         """
-        Query the vector store to surface related snippets and column names that map to the question.
+        Query the vector store to surface related snippets and entity names that map to the question.
         """
         if FaissVectorStoreCosine is None:
             return "", []
@@ -258,16 +316,16 @@ class QuestionSplitter:
         except Exception:
             return "", []
 
-        field_keys = set((self.meta_cache.get("fields") or {}).keys())
-        columns = set()
+        entities_found = set()
         snippets: List[str] = []
         for h in hits:
             md = (h.get("metadata") or {})
             if not isinstance(md, dict):
                 continue
-            for k, v in md.items():
-                if k in field_keys and v:
-                    columns.add(k)
+            # entity_name may be in _raw after _map_meta processing
+            entity = md.get("entity_name") or (md.get("_raw") or {}).get("entity_name", "")
+            if entity and not entity.startswith("_"):
+                entities_found.add(entity)
             txt = md.get("text")
             if isinstance(txt, str) and txt.strip():
                 snippets.append(txt.strip())
@@ -275,7 +333,7 @@ class QuestionSplitter:
         context = " ".join(snippets).strip()
         if len(context) > 400:
             context = context[:400] + "..."
-        return context, sorted(columns)
+        return context, sorted(entities_found)
 
     def _fallback_tree(self, query: str) -> Dict[str, Any]:
         augmented = query
@@ -283,8 +341,7 @@ class QuestionSplitter:
             terms = self._vector_terms(query)
             if terms:
                 augmented = f"{query} | {' '.join(terms)}"
-        return _rule_based_tree(augmented)
-
+        return _rule_based_tree(augmented, meta=self.meta_cache)
 
     def plan(self, question: str, memory_text: str = "") -> Plan:
         q = _norm(question)
@@ -312,29 +369,30 @@ class QuestionSplitter:
         prompt = _LLMRouter._prompt_header() + "\n" + _LLMRouter._prompt_body(
             user_query, meta_text, hint_text=hint_text, memory_text=memory_text
         )
-        return self.router.ask_json(prompt)
-   # ---- Formatting helpers ----
+        raw = self.router.ask_json(prompt)
+        if isinstance(raw, dict):
+            try:
+                return _number_from_llm_dict(raw)
+            except Exception:
+                pass
+
+        # Retry with vector-derived hints if not already provided
+        vector_hints = " ".join(self._vector_terms(user_query))
+        if vector_hints and vector_hints != hint_text:
+            prompt2 = _LLMRouter._prompt_header() + "\n" + _LLMRouter._prompt_body(
+                user_query, meta_text, hint_text=vector_hints, memory_text=memory_text
+            )
+            raw2 = self.router.ask_json(prompt2)
+            if isinstance(raw2, dict):
+                try:
+                    return _number_from_llm_dict(raw2)
+                except Exception:
+                    pass
+        return None
+
+    # ---- Formatting helpers ----
     def _meta_to_text(self, md: Dict[str, Any]) -> str:
-        if not md:
-            return "(none)"
-        lines = []
-        ds = md.get("dataset") or {}
-        fields = md.get("fields") or {}
-        syn = md.get("synonyms") or {}
-        if ds:
-            lines.append("Dataset:")
-            for k, v in ds.items():
-                lines.append(f"- {k}: {v}")
-        if fields:
-            lines.append("Fields:")
-            for k, v in fields.items():
-                lines.append(f"- {k}: {v}")
-        if syn:
-            lines.append("Synonyms:")
-            for k, v in syn.items():
-                vv = ", ".join(map(str, v)) if isinstance(v, list) else str(v)
-                lines.append(f"- {k}: {vv}")
-        return "\n".join(lines)
+        return _table_metadata_text(md)
 
 def split_query_simple(user_query: str, memory_text: str = "") -> Dict[str, Any]:
     splitter = QuestionSplitter()

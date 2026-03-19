@@ -11,34 +11,48 @@ dataset:
 entities:
   Account:
     fields:
-      account_id: "Id"
-      account_name: "Name"
-      fully_qualified_name: "FullyQualifiedName"
-      description: "Description"
-      active: "Active"
-      classification: "Classification"
-      account_type: "AccountType"
-      account_sub_type: "AccountSubType"
-      sub_account: "SubAccount"
-      parent_ref: "ParentRef.value"
-      current_balance: "CurrentBalance"
-      current_balance_with_subs: "CurrentBalanceWithSubAccounts"
-      currency_ref: "CurrencyRef.value"
+      id: id
+      sync_token: sync_token
+      domain: domain
+      sparse: sparse
+      name: name
+      fully_qualified_name: fully_qualified_name
+      description: description
+      active: active
+      classification: classification
+      account_type: account_type
+      account_sub_type: account_sub_type
+      sub_account: sub_account
+      parent_ref_value: parent_ref_value
+      current_balance: current_balance
+      current_balance_with_sub_accounts: current_balance_with_sub_accounts
+      currency_ref_value: currency_ref_value
+      currency_ref_name: currency_ref_name
+      meta_data_create_time: meta_data_create_time
+      meta_data_last_updated_time: meta_data_last_updated_time
     types:
-      Id: string
-      Name: string
-      FullyQualifiedName: string
-      Description: string
-      Active: boolean
-      Classification: string
-      AccountType: string
-      AccountSubType: string
-      SubAccount: boolean
-      CurrentBalance: double
-      CurrentBalanceWithSubAccounts: double
+      id: VARCHAR
+      sync_token: VARCHAR
+      domain: VARCHAR
+      sparse: BOOLEAN
+      name: VARCHAR
+      fully_qualified_name: VARCHAR
+      description: VARCHAR
+      active: BOOLEAN
+      classification: VARCHAR
+      account_type: VARCHAR
+      account_sub_type: VARCHAR
+      sub_account: BOOLEAN
+      parent_ref_value: VARCHAR
+      current_balance: DOUBLE
+      current_balance_with_sub_accounts: DOUBLE
+      currency_ref_value: VARCHAR
+      currency_ref_name: VARCHAR
+      meta_data_create_time: VARCHAR
+      meta_data_last_updated_time: VARCHAR
     valid_values:
-      Classification: ["Asset", "Liability", "Equity", "Revenue", "Expense"]
-      AccountType:
+      classification: ["Asset", "Liability", "Equity", "Revenue", "Expense"]
+      account_type:
         - "Bank"
         - "Accounts Receivable"
         - "Other Current Asset"
@@ -54,58 +68,6 @@ entities:
         - "Expense"
         - "Other Income"
         - "Other Expense"
-      AccountSubType:
-        - "AccountsPayable"
-        - "AccountsReceivable"
-        - "AccumulatedDepreciation"
-        - "AdvertisingOrPromotional"
-        - "Auto"
-        - "BadDebts"
-        - "BankCharges"
-        - "CashAndCashEquivalents"
-        - "Checking"
-        - "CostOfGoodsSold"
-        - "CreditCard"
-        - "Depreciation"
-        - "DiscountsOrRefundsGiven"
-        - "DuesAndSubscriptions"
-        - "EntertainmentMeals"
-        - "EquipmentRental"
-        - "ExchangeGainOrLoss"
-        - "GlobalTaxPayable"
-        - "Insurance"
-        - "InterestEarned"
-        - "Inventory"
-        - "LegalAndProfessionalFees"
-        - "LoanPayable"
-        - "LongTermDebt"
-        - "OfficeOrGeneralAdministrativeExpenses"
-        - "OpeningBalanceEquity"
-        - "OtherCurrentAssets"
-        - "OtherCurrentLiabilities"
-        - "OtherLongTermLiabilities"
-        - "OtherMiscellaneousExpense"
-        - "OtherMiscellaneousIncome"
-        - "OtherMiscellaneousServiceCost"
-        - "OtherPrimaryIncome"
-        - "PenaltiesAndSettlements"
-        - "PrepaidExpenses"
-        - "RentOrLeaseOfBuildings"
-        - "RepairAndMaintenance"
-        - "RetainedEarnings"
-        - "SalesOfProductIncome"
-        - "Savings"
-        - "ServiceOrFeeIncome"
-        - "SuppliesAndMaterials"
-        - "SuppliesAndMaterialsCogs"
-        - "TaxesPaid"
-        - "Travel"
-        - "TravelMeals"
-        - "UnappliedCashBillPaymentExpense"
-        - "UnappliedCashPaymentIncome"
-        - "UndepositedFunds"
-        - "Utilities"
-        - "Vehicles"
     synonyms:
       account: [chart of accounts, ledger account, GL account, coa]
       balance: [account balance, current balance]
@@ -116,35 +78,77 @@ entities:
   # ──────────────────────────────────────────────
   Customer:
     fields:
-      customer_id: "Id"
-      display_name: "DisplayName"
-      company_name: "CompanyName"
-      given_name: "GivenName"
-      family_name: "FamilyName"
-      fully_qualified_name: "FullyQualifiedName"
-      print_on_check_name: "PrintOnCheckName"
-      active: "Active"
-      taxable: "Taxable"
-      balance: "Balance"
-      balance_with_jobs: "BalanceWithJobs"
-      preferred_delivery_method: "PreferredDeliveryMethod"
-      is_project: "IsProject"
-      bill_addr_city: "BillAddr.City"
-      bill_addr_state: "BillAddr.CountrySubDivisionCode"
-      bill_addr_postal: "BillAddr.PostalCode"
-      primary_phone: "PrimaryPhone.FreeFormNumber"
-      primary_email: "PrimaryEmailAddr.Address"
+      id: id
+      sync_token: sync_token
+      domain: domain
+      sparse: sparse
+      display_name: display_name
+      company_name: company_name
+      given_name: given_name
+      family_name: family_name
+      fully_qualified_name: fully_qualified_name
+      print_on_check_name: print_on_check_name
+      active: active
+      taxable: taxable
+      job: job
+      bill_with_parent: bill_with_parent
+      balance: balance
+      balance_with_jobs: balance_with_jobs
+      preferred_delivery_method: preferred_delivery_method
+      is_project: is_project
+      client_entity_id: client_entity_id
+      level: level
+      parent_ref_value: parent_ref_value
+      v4_id_pseudonym: v4_id_pseudonym
+      currency_ref_value: currency_ref_value
+      currency_ref_name: currency_ref_name
+      bill_addr_id: bill_addr_id
+      bill_addr_line1: bill_addr_line1
+      bill_addr_city: bill_addr_city
+      bill_addr_country_sub_division_code: bill_addr_country_sub_division_code
+      bill_addr_postal_code: bill_addr_postal_code
+      bill_addr_lat: bill_addr_lat
+      bill_addr_long: bill_addr_long
+      ship_addr_id: ship_addr_id
+      ship_addr_line1: ship_addr_line1
+      ship_addr_city: ship_addr_city
+      ship_addr_country_sub_division_code: ship_addr_country_sub_division_code
+      ship_addr_postal_code: ship_addr_postal_code
+      ship_addr_lat: ship_addr_lat
+      ship_addr_long: ship_addr_long
+      primary_phone_free_form_number: primary_phone_free_form_number
+      primary_email_addr_address: primary_email_addr_address
+      meta_data_create_time: meta_data_create_time
+      meta_data_last_updated_time: meta_data_last_updated_time
     types:
-      Id: string
-      DisplayName: string
-      CompanyName: string
-      GivenName: string
-      FamilyName: string
-      Active: boolean
-      Taxable: boolean
-      Balance: double
-      BalanceWithJobs: double
-      IsProject: boolean
+      id: VARCHAR
+      sync_token: VARCHAR
+      domain: VARCHAR
+      sparse: BOOLEAN
+      display_name: VARCHAR
+      company_name: VARCHAR
+      given_name: VARCHAR
+      family_name: VARCHAR
+      fully_qualified_name: VARCHAR
+      print_on_check_name: VARCHAR
+      active: BOOLEAN
+      taxable: BOOLEAN
+      job: BOOLEAN
+      bill_with_parent: BOOLEAN
+      balance: DOUBLE
+      balance_with_jobs: DOUBLE
+      preferred_delivery_method: VARCHAR
+      is_project: BOOLEAN
+      client_entity_id: VARCHAR
+      level: BIGINT
+      parent_ref_value: VARCHAR
+      v4_id_pseudonym: VARCHAR
+      currency_ref_value: VARCHAR
+      currency_ref_name: VARCHAR
+      primary_phone_free_form_number: VARCHAR
+      primary_email_addr_address: VARCHAR
+      meta_data_create_time: VARCHAR
+      meta_data_last_updated_time: VARCHAR
     synonyms:
       customer: [client, buyer, purchaser]
       balance: [open balance, outstanding balance, amount owed]
@@ -155,28 +159,64 @@ entities:
   # ──────────────────────────────────────────────
   Vendor:
     fields:
-      vendor_id: "Id"
-      display_name: "DisplayName"
-      company_name: "CompanyName"
-      given_name: "GivenName"
-      family_name: "FamilyName"
-      print_on_check_name: "PrintOnCheckName"
-      active: "Active"
-      balance: "Balance"
-      acct_num: "AcctNum"
-      vendor_1099: "Vendor1099"
-      bill_rate: "BillRate"
-      term_ref: "TermRef.value"
-      primary_phone: "PrimaryPhone.FreeFormNumber"
-      primary_email: "PrimaryEmailAddr.Address"
-      web_addr: "WebAddr.URI"
+      id: id
+      sync_token: sync_token
+      domain: domain
+      sparse: sparse
+      display_name: display_name
+      company_name: company_name
+      given_name: given_name
+      family_name: family_name
+      print_on_check_name: print_on_check_name
+      active: active
+      balance: balance
+      acct_num: acct_num
+      vendor1099: vendor1099
+      bill_rate: bill_rate
+      term_ref_value: term_ref_value
+      currency_ref_value: currency_ref_value
+      currency_ref_name: currency_ref_name
+      v4_id_pseudonym: v4_id_pseudonym
+      bill_addr_id: bill_addr_id
+      bill_addr_line1: bill_addr_line1
+      bill_addr_city: bill_addr_city
+      bill_addr_country_sub_division_code: bill_addr_country_sub_division_code
+      bill_addr_postal_code: bill_addr_postal_code
+      bill_addr_lat: bill_addr_lat
+      bill_addr_long: bill_addr_long
+      primary_phone_free_form_number: primary_phone_free_form_number
+      primary_email_addr_address: primary_email_addr_address
+      mobile_free_form_number: mobile_free_form_number
+      fax_free_form_number: fax_free_form_number
+      web_addr_uri: web_addr_uri
+      meta_data_create_time: meta_data_create_time
+      meta_data_last_updated_time: meta_data_last_updated_time
     types:
-      Id: string
-      DisplayName: string
-      Active: boolean
-      Balance: double
-      Vendor1099: boolean
-      BillRate: double
+      id: VARCHAR
+      sync_token: VARCHAR
+      domain: VARCHAR
+      sparse: BOOLEAN
+      display_name: VARCHAR
+      company_name: VARCHAR
+      given_name: VARCHAR
+      family_name: VARCHAR
+      print_on_check_name: VARCHAR
+      active: BOOLEAN
+      balance: DOUBLE
+      acct_num: VARCHAR
+      vendor1099: BOOLEAN
+      bill_rate: DOUBLE
+      term_ref_value: VARCHAR
+      currency_ref_value: VARCHAR
+      currency_ref_name: VARCHAR
+      v4_id_pseudonym: VARCHAR
+      primary_phone_free_form_number: VARCHAR
+      primary_email_addr_address: VARCHAR
+      mobile_free_form_number: VARCHAR
+      fax_free_form_number: VARCHAR
+      web_addr_uri: VARCHAR
+      meta_data_create_time: VARCHAR
+      meta_data_last_updated_time: VARCHAR
     synonyms:
       vendor: [supplier, provider, seller]
       balance: [vendor balance, amount owed to vendor]
@@ -186,48 +226,80 @@ entities:
   # ──────────────────────────────────────────────
   Employee:
     fields:
-      employee_id: "Id"
-      display_name: "DisplayName"
-      given_name: "GivenName"
-      family_name: "FamilyName"
-      active: "Active"
-      billable_time: "BillableTime"
-      hired_date: "HiredDate"
-      primary_phone: "PrimaryPhone.FreeFormNumber"
+      id: id
+      sync_token: sync_token
+      domain: domain
+      sparse: sparse
+      display_name: display_name
+      given_name: given_name
+      family_name: family_name
+      print_on_check_name: print_on_check_name
+      active: active
+      billable_time: billable_time
+      hired_date: hired_date
+      v4_id_pseudonym: v4_id_pseudonym
+      primary_phone_free_form_number: primary_phone_free_form_number
+      meta_data_create_time: meta_data_create_time
+      meta_data_last_updated_time: meta_data_last_updated_time
     types:
-      Id: string
-      DisplayName: string
-      Active: boolean
-      BillableTime: boolean
-      HiredDate: date
+      id: VARCHAR
+      sync_token: VARCHAR
+      domain: VARCHAR
+      sparse: BOOLEAN
+      display_name: VARCHAR
+      given_name: VARCHAR
+      family_name: VARCHAR
+      print_on_check_name: VARCHAR
+      active: BOOLEAN
+      billable_time: BOOLEAN
+      hired_date: VARCHAR
+      v4_id_pseudonym: VARCHAR
+      primary_phone_free_form_number: VARCHAR
+      meta_data_create_time: VARCHAR
+      meta_data_last_updated_time: VARCHAR
 
   # ──────────────────────────────────────────────
   # Entity: Item (Products & Services)
   # ──────────────────────────────────────────────
   Item:
     fields:
-      item_id: "Id"
-      item_name: "Name"
-      description: "Description"
-      fully_qualified_name: "FullyQualifiedName"
-      type: "Type"
-      active: "Active"
-      taxable: "Taxable"
-      unit_price: "UnitPrice"
-      purchase_cost: "PurchaseCost"
-      track_qty_on_hand: "TrackQtyOnHand"
-      income_account_ref: "IncomeAccountRef.value"
+      id: id
+      sync_token: sync_token
+      domain: domain
+      sparse: sparse
+      name: name
+      description: description
+      fully_qualified_name: fully_qualified_name
+      type: type
+      active: active
+      taxable: taxable
+      unit_price: unit_price
+      purchase_cost: purchase_cost
+      track_qty_on_hand: track_qty_on_hand
+      income_account_ref_value: income_account_ref_value
+      income_account_ref_name: income_account_ref_name
+      meta_data_create_time: meta_data_create_time
+      meta_data_last_updated_time: meta_data_last_updated_time
     types:
-      Id: string
-      Name: string
-      Type: string
-      Active: boolean
-      Taxable: boolean
-      UnitPrice: double
-      PurchaseCost: double
-      TrackQtyOnHand: boolean
+      id: VARCHAR
+      sync_token: VARCHAR
+      domain: VARCHAR
+      sparse: BOOLEAN
+      name: VARCHAR
+      description: VARCHAR
+      fully_qualified_name: VARCHAR
+      type: VARCHAR
+      active: BOOLEAN
+      taxable: BOOLEAN
+      unit_price: DOUBLE
+      purchase_cost: DOUBLE
+      track_qty_on_hand: BOOLEAN
+      income_account_ref_value: VARCHAR
+      income_account_ref_name: VARCHAR
+      meta_data_create_time: VARCHAR
+      meta_data_last_updated_time: VARCHAR
     valid_values:
-      Type: ["Service", "Inventory", "NonInventory", "Bundle", "Group"]
+      type: ["Service", "Inventory", "NonInventory", "Bundle", "Group"]
     synonyms:
       item: [product, service, sku, merchandise]
       price: [unit price, selling price, rate]
@@ -237,28 +309,86 @@ entities:
   # ──────────────────────────────────────────────
   Invoice:
     fields:
-      invoice_id: "Id"
-      doc_number: "DocNumber"
-      txn_date: "TxnDate"
-      due_date: "DueDate"
-      total_amt: "TotalAmt"
-      balance: "Balance"
-      customer_ref: "CustomerRef.value"
-      customer_name: "CustomerRef.name"
-      sales_term_ref: "SalesTermRef.value"
-      bill_email: "BillEmail.Address"
-      print_status: "PrintStatus"
-      email_status: "EmailStatus"
+      id: id
+      sync_token: sync_token
+      domain: domain
+      sparse: sparse
+      doc_number: doc_number
+      txn_date: txn_date
+      due_date: due_date
+      total_amt: total_amt
+      balance: balance
+      customer_ref_value: customer_ref_value
+      customer_ref_name: customer_ref_name
+      customer_memo_value: customer_memo_value
+      sales_term_ref_value: sales_term_ref_value
+      sales_term_ref_name: sales_term_ref_name
+      bill_email_address: bill_email_address
+      print_status: print_status
+      email_status: email_status
+      currency_ref_value: currency_ref_value
+      currency_ref_name: currency_ref_name
+      txn_tax_detail_total_tax: txn_tax_detail_total_tax
+      txn_tax_detail_txn_tax_code_ref_value: txn_tax_detail_txn_tax_code_ref_value
+      apply_tax_after_discount: apply_tax_after_discount
+      allow_ipn_payment: allow_ipn_payment
+      allow_online_payment: allow_online_payment
+      allow_online_credit_card_payment: allow_online_credit_card_payment
+      allow_online_ach_payment: allow_online_ach_payment
+      free_form_address: free_form_address
+      delivery_info_delivery_type: delivery_info_delivery_type
+      bill_addr_id: bill_addr_id
+      bill_addr_line1: bill_addr_line1
+      bill_addr_line2: bill_addr_line2
+      bill_addr_line3: bill_addr_line3
+      bill_addr_line4: bill_addr_line4
+      bill_addr_lat: bill_addr_lat
+      bill_addr_long: bill_addr_long
+      ship_addr_id: ship_addr_id
+      ship_addr_line1: ship_addr_line1
+      ship_addr_city: ship_addr_city
+      ship_addr_country_sub_division_code: ship_addr_country_sub_division_code
+      ship_addr_postal_code: ship_addr_postal_code
+      ship_addr_lat: ship_addr_lat
+      ship_addr_long: ship_addr_long
+      meta_data_create_time: meta_data_create_time
+      meta_data_last_modified_by_ref_value: meta_data_last_modified_by_ref_value
+      meta_data_last_updated_time: meta_data_last_updated_time
     types:
-      Id: string
-      DocNumber: string
-      TxnDate: date
-      DueDate: date
-      TotalAmt: double
-      Balance: double
+      id: VARCHAR
+      sync_token: VARCHAR
+      domain: VARCHAR
+      sparse: BOOLEAN
+      doc_number: VARCHAR
+      txn_date: VARCHAR
+      due_date: VARCHAR
+      total_amt: DOUBLE
+      balance: DOUBLE
+      customer_ref_value: VARCHAR
+      customer_ref_name: VARCHAR
+      customer_memo_value: VARCHAR
+      sales_term_ref_value: VARCHAR
+      sales_term_ref_name: VARCHAR
+      bill_email_address: VARCHAR
+      print_status: VARCHAR
+      email_status: VARCHAR
+      currency_ref_value: VARCHAR
+      currency_ref_name: VARCHAR
+      txn_tax_detail_total_tax: DOUBLE
+      txn_tax_detail_txn_tax_code_ref_value: VARCHAR
+      apply_tax_after_discount: BOOLEAN
+      allow_ipn_payment: BOOLEAN
+      allow_online_payment: BOOLEAN
+      allow_online_credit_card_payment: BOOLEAN
+      allow_online_ach_payment: BOOLEAN
+      free_form_address: BOOLEAN
+      delivery_info_delivery_type: VARCHAR
+      meta_data_create_time: VARCHAR
+      meta_data_last_modified_by_ref_value: VARCHAR
+      meta_data_last_updated_time: VARCHAR
     valid_values:
-      PrintStatus: ["NeedToPrint", "NotSet"]
-      EmailStatus: ["NeedToSend", "EmailSent", "NotSet"]
+      print_status: ["NeedToPrint", "NotSet"]
+      email_status: ["NeedToSend", "EmailSent", "NotSet"]
     synonyms:
       invoice: [bill to customer, sales invoice, customer invoice]
       total: [invoice total, total amount, amount]
@@ -270,21 +400,69 @@ entities:
   # ──────────────────────────────────────────────
   Estimate:
     fields:
-      estimate_id: "Id"
-      doc_number: "DocNumber"
-      txn_date: "TxnDate"
-      total_amt: "TotalAmt"
-      txn_status: "TxnStatus"
-      customer_ref: "CustomerRef.value"
-      customer_name: "CustomerRef.name"
+      id: id
+      sync_token: sync_token
+      domain: domain
+      sparse: sparse
+      doc_number: doc_number
+      txn_date: txn_date
+      total_amt: total_amt
+      txn_status: txn_status
+      customer_ref_value: customer_ref_value
+      customer_ref_name: customer_ref_name
+      customer_memo_value: customer_memo_value
+      bill_email_address: bill_email_address
+      print_status: print_status
+      email_status: email_status
+      currency_ref_value: currency_ref_value
+      currency_ref_name: currency_ref_name
+      txn_tax_detail_total_tax: txn_tax_detail_total_tax
+      txn_tax_detail_txn_tax_code_ref_value: txn_tax_detail_txn_tax_code_ref_value
+      apply_tax_after_discount: apply_tax_after_discount
+      free_form_address: free_form_address
+      delivery_info_delivery_type: delivery_info_delivery_type
+      bill_addr_id: bill_addr_id
+      bill_addr_line1: bill_addr_line1
+      bill_addr_line2: bill_addr_line2
+      bill_addr_line3: bill_addr_line3
+      bill_addr_line4: bill_addr_line4
+      bill_addr_lat: bill_addr_lat
+      bill_addr_long: bill_addr_long
+      ship_addr_id: ship_addr_id
+      ship_addr_line1: ship_addr_line1
+      ship_addr_city: ship_addr_city
+      ship_addr_country_sub_division_code: ship_addr_country_sub_division_code
+      ship_addr_postal_code: ship_addr_postal_code
+      ship_addr_lat: ship_addr_lat
+      ship_addr_long: ship_addr_long
+      meta_data_create_time: meta_data_create_time
+      meta_data_last_updated_time: meta_data_last_updated_time
     types:
-      Id: string
-      DocNumber: string
-      TxnDate: date
-      TotalAmt: double
-      TxnStatus: string
+      id: VARCHAR
+      sync_token: VARCHAR
+      domain: VARCHAR
+      sparse: BOOLEAN
+      doc_number: VARCHAR
+      txn_date: VARCHAR
+      total_amt: DOUBLE
+      txn_status: VARCHAR
+      customer_ref_value: VARCHAR
+      customer_ref_name: VARCHAR
+      customer_memo_value: VARCHAR
+      bill_email_address: VARCHAR
+      print_status: VARCHAR
+      email_status: VARCHAR
+      currency_ref_value: VARCHAR
+      currency_ref_name: VARCHAR
+      txn_tax_detail_total_tax: DOUBLE
+      txn_tax_detail_txn_tax_code_ref_value: VARCHAR
+      apply_tax_after_discount: BOOLEAN
+      free_form_address: BOOLEAN
+      delivery_info_delivery_type: VARCHAR
+      meta_data_create_time: VARCHAR
+      meta_data_last_updated_time: VARCHAR
     valid_values:
-      TxnStatus: ["Accepted", "Closed", "Pending", "Rejected"]
+      txn_status: ["Accepted", "Closed", "Pending", "Rejected"]
     synonyms:
       estimate: [quote, proposal, bid]
 
@@ -293,21 +471,74 @@ entities:
   # ──────────────────────────────────────────────
   SalesReceipt:
     fields:
-      sales_receipt_id: "Id"
-      doc_number: "DocNumber"
-      txn_date: "TxnDate"
-      total_amt: "TotalAmt"
-      balance: "Balance"
-      customer_ref: "CustomerRef.value"
-      customer_name: "CustomerRef.name"
-      payment_method_ref: "PaymentMethodRef.value"
-      deposit_to_account_ref: "DepositToAccountRef.value"
+      id: id
+      sync_token: sync_token
+      domain: domain
+      sparse: sparse
+      doc_number: doc_number
+      txn_date: txn_date
+      total_amt: total_amt
+      balance: balance
+      customer_ref_value: customer_ref_value
+      customer_ref_name: customer_ref_name
+      customer_memo_value: customer_memo_value
+      bill_email_address: bill_email_address
+      print_status: print_status
+      email_status: email_status
+      payment_method_ref_value: payment_method_ref_value
+      payment_method_ref_name: payment_method_ref_name
+      payment_ref_num: payment_ref_num
+      deposit_to_account_ref_value: deposit_to_account_ref_value
+      deposit_to_account_ref_name: deposit_to_account_ref_name
+      currency_ref_value: currency_ref_value
+      currency_ref_name: currency_ref_name
+      txn_tax_detail_total_tax: txn_tax_detail_total_tax
+      apply_tax_after_discount: apply_tax_after_discount
+      free_form_address: free_form_address
+      bill_addr_id: bill_addr_id
+      bill_addr_line1: bill_addr_line1
+      bill_addr_line2: bill_addr_line2
+      bill_addr_line3: bill_addr_line3
+      bill_addr_line4: bill_addr_line4
+      bill_addr_lat: bill_addr_lat
+      bill_addr_long: bill_addr_long
+      ship_addr_id: ship_addr_id
+      ship_addr_line1: ship_addr_line1
+      ship_addr_city: ship_addr_city
+      ship_addr_country_sub_division_code: ship_addr_country_sub_division_code
+      ship_addr_postal_code: ship_addr_postal_code
+      ship_addr_country: ship_addr_country
+      ship_addr_lat: ship_addr_lat
+      ship_addr_long: ship_addr_long
+      meta_data_create_time: meta_data_create_time
+      meta_data_last_updated_time: meta_data_last_updated_time
     types:
-      Id: string
-      DocNumber: string
-      TxnDate: date
-      TotalAmt: double
-      Balance: double
+      id: VARCHAR
+      sync_token: VARCHAR
+      domain: VARCHAR
+      sparse: BOOLEAN
+      doc_number: VARCHAR
+      txn_date: VARCHAR
+      total_amt: DOUBLE
+      balance: DOUBLE
+      customer_ref_value: VARCHAR
+      customer_ref_name: VARCHAR
+      customer_memo_value: VARCHAR
+      bill_email_address: VARCHAR
+      print_status: VARCHAR
+      email_status: VARCHAR
+      payment_method_ref_value: VARCHAR
+      payment_method_ref_name: VARCHAR
+      payment_ref_num: VARCHAR
+      deposit_to_account_ref_value: VARCHAR
+      deposit_to_account_ref_name: VARCHAR
+      currency_ref_value: VARCHAR
+      currency_ref_name: VARCHAR
+      txn_tax_detail_total_tax: DOUBLE
+      apply_tax_after_discount: BOOLEAN
+      free_form_address: BOOLEAN
+      meta_data_create_time: VARCHAR
+      meta_data_last_updated_time: VARCHAR
     synonyms:
       sales receipt: [cash sale, receipt, pos sale]
 
@@ -316,19 +547,65 @@ entities:
   # ──────────────────────────────────────────────
   CreditMemo:
     fields:
-      credit_memo_id: "Id"
-      doc_number: "DocNumber"
-      txn_date: "TxnDate"
-      total_amt: "TotalAmt"
-      balance: "Balance"
-      remaining_credit: "RemainingCredit"
-      customer_ref: "CustomerRef.value"
-      customer_name: "CustomerRef.name"
+      id: id
+      sync_token: sync_token
+      domain: domain
+      sparse: sparse
+      doc_number: doc_number
+      txn_date: txn_date
+      total_amt: total_amt
+      balance: balance
+      remaining_credit: remaining_credit
+      customer_ref_value: customer_ref_value
+      customer_ref_name: customer_ref_name
+      customer_memo_value: customer_memo_value
+      bill_email_address: bill_email_address
+      print_status: print_status
+      email_status: email_status
+      currency_ref_value: currency_ref_value
+      currency_ref_name: currency_ref_name
+      txn_tax_detail_total_tax: txn_tax_detail_total_tax
+      apply_tax_after_discount: apply_tax_after_discount
+      free_form_address: free_form_address
+      bill_addr_id: bill_addr_id
+      bill_addr_line1: bill_addr_line1
+      bill_addr_line2: bill_addr_line2
+      bill_addr_line3: bill_addr_line3
+      bill_addr_line4: bill_addr_line4
+      bill_addr_lat: bill_addr_lat
+      bill_addr_long: bill_addr_long
+      ship_addr_id: ship_addr_id
+      ship_addr_line1: ship_addr_line1
+      ship_addr_city: ship_addr_city
+      ship_addr_country_sub_division_code: ship_addr_country_sub_division_code
+      ship_addr_postal_code: ship_addr_postal_code
+      ship_addr_lat: ship_addr_lat
+      ship_addr_long: ship_addr_long
+      meta_data_create_time: meta_data_create_time
+      meta_data_last_updated_time: meta_data_last_updated_time
     types:
-      Id: string
-      TxnDate: date
-      TotalAmt: double
-      RemainingCredit: double
+      id: VARCHAR
+      sync_token: VARCHAR
+      domain: VARCHAR
+      sparse: BOOLEAN
+      doc_number: VARCHAR
+      txn_date: VARCHAR
+      total_amt: DOUBLE
+      balance: DOUBLE
+      remaining_credit: DOUBLE
+      customer_ref_value: VARCHAR
+      customer_ref_name: VARCHAR
+      customer_memo_value: VARCHAR
+      bill_email_address: VARCHAR
+      print_status: VARCHAR
+      email_status: VARCHAR
+      currency_ref_value: VARCHAR
+      currency_ref_name: VARCHAR
+      txn_tax_detail_total_tax: DOUBLE
+      apply_tax_after_discount: BOOLEAN
+      free_form_address: BOOLEAN
+      meta_data_create_time: VARCHAR
+      meta_data_last_updated_time: VARCHAR
     synonyms:
       credit memo: [credit note, customer credit, credit]
 
@@ -337,19 +614,43 @@ entities:
   # ──────────────────────────────────────────────
   Payment:
     fields:
-      payment_id: "Id"
-      txn_date: "TxnDate"
-      total_amt: "TotalAmt"
-      unapplied_amt: "UnappliedAmt"
-      customer_ref: "CustomerRef.value"
-      customer_name: "CustomerRef.name"
-      payment_method_ref: "PaymentMethodRef.value"
-      deposit_to_account_ref: "DepositToAccountRef.value"
+      id: id
+      sync_token: sync_token
+      domain: domain
+      sparse: sparse
+      txn_date: txn_date
+      total_amt: total_amt
+      unapplied_amt: unapplied_amt
+      process_payment: process_payment
+      customer_ref_value: customer_ref_value
+      customer_ref_name: customer_ref_name
+      payment_method_ref_value: payment_method_ref_value
+      deposit_to_account_ref_value: deposit_to_account_ref_value
+      payment_ref_num: payment_ref_num
+      private_note: private_note
+      currency_ref_value: currency_ref_value
+      currency_ref_name: currency_ref_name
+      meta_data_create_time: meta_data_create_time
+      meta_data_last_updated_time: meta_data_last_updated_time
     types:
-      Id: string
-      TxnDate: date
-      TotalAmt: double
-      UnappliedAmt: double
+      id: VARCHAR
+      sync_token: VARCHAR
+      domain: VARCHAR
+      sparse: BOOLEAN
+      txn_date: VARCHAR
+      total_amt: DOUBLE
+      unapplied_amt: DOUBLE
+      process_payment: BOOLEAN
+      customer_ref_value: VARCHAR
+      customer_ref_name: VARCHAR
+      payment_method_ref_value: VARCHAR
+      deposit_to_account_ref_value: VARCHAR
+      payment_ref_num: VARCHAR
+      private_note: VARCHAR
+      currency_ref_value: VARCHAR
+      currency_ref_name: VARCHAR
+      meta_data_create_time: VARCHAR
+      meta_data_last_updated_time: VARCHAR
     synonyms:
       payment: [customer payment, payment received, cash receipt]
 
@@ -358,22 +659,50 @@ entities:
   # ──────────────────────────────────────────────
   Bill:
     fields:
-      bill_id: "Id"
-      doc_number: "DocNumber"
-      txn_date: "TxnDate"
-      due_date: "DueDate"
-      total_amt: "TotalAmt"
-      balance: "Balance"
-      vendor_ref: "VendorRef.value"
-      vendor_name: "VendorRef.name"
-      sales_term_ref: "SalesTermRef.value"
-      ap_account_ref: "APAccountRef.value"
+      id: id
+      sync_token: sync_token
+      domain: domain
+      sparse: sparse
+      txn_date: txn_date
+      due_date: due_date
+      total_amt: total_amt
+      balance: balance
+      vendor_ref_value: vendor_ref_value
+      vendor_ref_name: vendor_ref_name
+      sales_term_ref_value: sales_term_ref_value
+      ap_account_ref_value: ap_account_ref_value
+      ap_account_ref_name: ap_account_ref_name
+      currency_ref_value: currency_ref_value
+      currency_ref_name: currency_ref_name
+      vendor_addr_id: vendor_addr_id
+      vendor_addr_line1: vendor_addr_line1
+      vendor_addr_city: vendor_addr_city
+      vendor_addr_country_sub_division_code: vendor_addr_country_sub_division_code
+      vendor_addr_postal_code: vendor_addr_postal_code
+      vendor_addr_lat: vendor_addr_lat
+      vendor_addr_long: vendor_addr_long
+      meta_data_create_time: meta_data_create_time
+      meta_data_last_modified_by_ref_value: meta_data_last_modified_by_ref_value
+      meta_data_last_updated_time: meta_data_last_updated_time
     types:
-      Id: string
-      TxnDate: date
-      DueDate: date
-      TotalAmt: double
-      Balance: double
+      id: VARCHAR
+      sync_token: VARCHAR
+      domain: VARCHAR
+      sparse: BOOLEAN
+      txn_date: VARCHAR
+      due_date: VARCHAR
+      total_amt: DOUBLE
+      balance: DOUBLE
+      vendor_ref_value: VARCHAR
+      vendor_ref_name: VARCHAR
+      sales_term_ref_value: VARCHAR
+      ap_account_ref_value: VARCHAR
+      ap_account_ref_name: VARCHAR
+      currency_ref_value: VARCHAR
+      currency_ref_name: VARCHAR
+      meta_data_create_time: VARCHAR
+      meta_data_last_modified_by_ref_value: VARCHAR
+      meta_data_last_updated_time: VARCHAR
     synonyms:
       bill: [vendor bill, vendor invoice, ap bill, accounts payable]
 
@@ -382,20 +711,47 @@ entities:
   # ──────────────────────────────────────────────
   BillPayment:
     fields:
-      bill_payment_id: "Id"
-      doc_number: "DocNumber"
-      txn_date: "TxnDate"
-      total_amt: "TotalAmt"
-      pay_type: "PayType"
-      vendor_ref: "VendorRef.value"
-      vendor_name: "VendorRef.name"
+      id: id
+      sync_token: sync_token
+      domain: domain
+      sparse: sparse
+      doc_number: doc_number
+      txn_date: txn_date
+      total_amt: total_amt
+      pay_type: pay_type
+      vendor_ref_value: vendor_ref_value
+      vendor_ref_name: vendor_ref_name
+      currency_ref_value: currency_ref_value
+      currency_ref_name: currency_ref_name
+      check_payment_bank_account_ref_value: check_payment_bank_account_ref_value
+      check_payment_bank_account_ref_name: check_payment_bank_account_ref_name
+      check_payment_print_status: check_payment_print_status
+      credit_card_payment_cc_account_ref_value: credit_card_payment_cc_account_ref_value
+      credit_card_payment_cc_account_ref_name: credit_card_payment_cc_account_ref_name
+      meta_data_create_time: meta_data_create_time
+      meta_data_last_updated_time: meta_data_last_updated_time
     types:
-      Id: string
-      TxnDate: date
-      TotalAmt: double
-      PayType: string
+      id: VARCHAR
+      sync_token: VARCHAR
+      domain: VARCHAR
+      sparse: BOOLEAN
+      doc_number: VARCHAR
+      txn_date: VARCHAR
+      total_amt: DOUBLE
+      pay_type: VARCHAR
+      vendor_ref_value: VARCHAR
+      vendor_ref_name: VARCHAR
+      currency_ref_value: VARCHAR
+      currency_ref_name: VARCHAR
+      check_payment_bank_account_ref_value: VARCHAR
+      check_payment_bank_account_ref_name: VARCHAR
+      check_payment_print_status: VARCHAR
+      credit_card_payment_cc_account_ref_value: VARCHAR
+      credit_card_payment_cc_account_ref_name: VARCHAR
+      meta_data_create_time: VARCHAR
+      meta_data_last_updated_time: VARCHAR
     valid_values:
-      PayType: ["Check", "CreditCard"]
+      pay_type: ["Check", "CreditCard"]
     synonyms:
       bill payment: [vendor payment, ap payment, pay bill]
 
@@ -404,21 +760,58 @@ entities:
   # ──────────────────────────────────────────────
   PurchaseOrder:
     fields:
-      po_id: "Id"
-      doc_number: "DocNumber"
-      txn_date: "TxnDate"
-      total_amt: "TotalAmt"
-      po_status: "POStatus"
-      vendor_ref: "VendorRef.value"
-      vendor_name: "VendorRef.name"
-      ap_account_ref: "APAccountRef.value"
+      id: id
+      sync_token: sync_token
+      domain: domain
+      sparse: sparse
+      doc_number: doc_number
+      txn_date: txn_date
+      total_amt: total_amt
+      po_status: po_status
+      email_status: email_status
+      vendor_ref_value: vendor_ref_value
+      vendor_ref_name: vendor_ref_name
+      ap_account_ref_value: ap_account_ref_value
+      ap_account_ref_name: ap_account_ref_name
+      currency_ref_value: currency_ref_value
+      currency_ref_name: currency_ref_name
+      vendor_addr_id: vendor_addr_id
+      vendor_addr_line1: vendor_addr_line1
+      vendor_addr_line2: vendor_addr_line2
+      vendor_addr_line3: vendor_addr_line3
+      vendor_addr_line4: vendor_addr_line4
+      vendor_addr_lat: vendor_addr_lat
+      vendor_addr_long: vendor_addr_long
+      ship_addr_id: ship_addr_id
+      ship_addr_line1: ship_addr_line1
+      ship_addr_line2: ship_addr_line2
+      ship_addr_line3: ship_addr_line3
+      ship_addr_lat: ship_addr_lat
+      ship_addr_long: ship_addr_long
+      meta_data_create_time: meta_data_create_time
+      meta_data_last_modified_by_ref_value: meta_data_last_modified_by_ref_value
+      meta_data_last_updated_time: meta_data_last_updated_time
     types:
-      Id: string
-      TxnDate: date
-      TotalAmt: double
-      POStatus: string
+      id: VARCHAR
+      sync_token: VARCHAR
+      domain: VARCHAR
+      sparse: BOOLEAN
+      doc_number: VARCHAR
+      txn_date: VARCHAR
+      total_amt: DOUBLE
+      po_status: VARCHAR
+      email_status: VARCHAR
+      vendor_ref_value: VARCHAR
+      vendor_ref_name: VARCHAR
+      ap_account_ref_value: VARCHAR
+      ap_account_ref_name: VARCHAR
+      currency_ref_value: VARCHAR
+      currency_ref_name: VARCHAR
+      meta_data_create_time: VARCHAR
+      meta_data_last_modified_by_ref_value: VARCHAR
+      meta_data_last_updated_time: VARCHAR
     valid_values:
-      POStatus: ["Open", "Closed"]
+      po_status: ["Open", "Closed"]
     synonyms:
       purchase order: [po, order]
 
@@ -427,23 +820,45 @@ entities:
   # ──────────────────────────────────────────────
   Purchase:
     fields:
-      purchase_id: "Id"
-      txn_date: "TxnDate"
-      total_amt: "TotalAmt"
-      payment_type: "PaymentType"
-      credit: "Credit"
-      account_ref: "AccountRef.value"
-      account_name: "AccountRef.name"
-      entity_ref: "EntityRef.value"
-      entity_name: "EntityRef.name"
+      id: id
+      sync_token: sync_token
+      domain: domain
+      sparse: sparse
+      txn_date: txn_date
+      total_amt: total_amt
+      payment_type: payment_type
+      credit: credit
+      account_ref_value: account_ref_value
+      account_ref_name: account_ref_name
+      entity_ref_value: entity_ref_value
+      entity_ref_name: entity_ref_name
+      entity_ref_type: entity_ref_type
+      private_note: private_note
+      currency_ref_value: currency_ref_value
+      currency_ref_name: currency_ref_name
+      meta_data_create_time: meta_data_create_time
+      meta_data_last_updated_time: meta_data_last_updated_time
     types:
-      Id: string
-      TxnDate: date
-      TotalAmt: double
-      PaymentType: string
-      Credit: boolean
+      id: VARCHAR
+      sync_token: VARCHAR
+      domain: VARCHAR
+      sparse: BOOLEAN
+      txn_date: VARCHAR
+      total_amt: DOUBLE
+      payment_type: VARCHAR
+      credit: BOOLEAN
+      account_ref_value: VARCHAR
+      account_ref_name: VARCHAR
+      entity_ref_value: VARCHAR
+      entity_ref_name: VARCHAR
+      entity_ref_type: VARCHAR
+      private_note: VARCHAR
+      currency_ref_value: VARCHAR
+      currency_ref_name: VARCHAR
+      meta_data_create_time: VARCHAR
+      meta_data_last_updated_time: VARCHAR
     valid_values:
-      PaymentType: ["Cash", "Check", "CreditCard"]
+      payment_type: ["Cash", "Check", "CreditCard"]
     synonyms:
       purchase: [expense, expenditure, spend]
 
@@ -452,15 +867,41 @@ entities:
   # ──────────────────────────────────────────────
   Deposit:
     fields:
-      deposit_id: "Id"
-      txn_date: "TxnDate"
-      total_amt: "TotalAmt"
-      deposit_to_account_ref: "DepositToAccountRef.value"
-      deposit_to_account_name: "DepositToAccountRef.name"
+      id: id
+      sync_token: sync_token
+      domain: domain
+      sparse: sparse
+      txn_date: txn_date
+      total_amt: total_amt
+      deposit_to_account_ref_value: deposit_to_account_ref_value
+      deposit_to_account_ref_name: deposit_to_account_ref_name
+      cash_back_account_ref_value: cash_back_account_ref_value
+      cash_back_account_ref_name: cash_back_account_ref_name
+      cash_back_amount: cash_back_amount
+      cash_back_memo: cash_back_memo
+      private_note: private_note
+      currency_ref_value: currency_ref_value
+      currency_ref_name: currency_ref_name
+      meta_data_create_time: meta_data_create_time
+      meta_data_last_updated_time: meta_data_last_updated_time
     types:
-      Id: string
-      TxnDate: date
-      TotalAmt: double
+      id: VARCHAR
+      sync_token: VARCHAR
+      domain: VARCHAR
+      sparse: BOOLEAN
+      txn_date: VARCHAR
+      total_amt: DOUBLE
+      deposit_to_account_ref_value: VARCHAR
+      deposit_to_account_ref_name: VARCHAR
+      cash_back_account_ref_value: VARCHAR
+      cash_back_account_ref_name: VARCHAR
+      cash_back_amount: DOUBLE
+      cash_back_memo: VARCHAR
+      private_note: VARCHAR
+      currency_ref_value: VARCHAR
+      currency_ref_name: VARCHAR
+      meta_data_create_time: VARCHAR
+      meta_data_last_updated_time: VARCHAR
     synonyms:
       deposit: [bank deposit, bank transaction]
 
@@ -469,16 +910,31 @@ entities:
   # ──────────────────────────────────────────────
   JournalEntry:
     fields:
-      journal_entry_id: "Id"
-      txn_date: "TxnDate"
-      total_amt: "TotalAmt"
-      adjustment: "Adjustment"
-      private_note: "PrivateNote"
+      id: id
+      sync_token: sync_token
+      domain: domain
+      sparse: sparse
+      txn_date: txn_date
+      total_amt: total_amt
+      adjustment: adjustment
+      private_note: private_note
+      currency_ref_value: currency_ref_value
+      currency_ref_name: currency_ref_name
+      meta_data_create_time: meta_data_create_time
+      meta_data_last_updated_time: meta_data_last_updated_time
     types:
-      Id: string
-      TxnDate: date
-      TotalAmt: double
-      Adjustment: boolean
+      id: VARCHAR
+      sync_token: VARCHAR
+      domain: VARCHAR
+      sparse: BOOLEAN
+      txn_date: VARCHAR
+      total_amt: DOUBLE
+      adjustment: BOOLEAN
+      private_note: VARCHAR
+      currency_ref_value: VARCHAR
+      currency_ref_name: VARCHAR
+      meta_data_create_time: VARCHAR
+      meta_data_last_updated_time: VARCHAR
     synonyms:
       journal entry: [journal, je, manual entry, adjusting entry]
 
@@ -487,18 +943,62 @@ entities:
   # ──────────────────────────────────────────────
   RefundReceipt:
     fields:
-      refund_receipt_id: "Id"
-      doc_number: "DocNumber"
-      txn_date: "TxnDate"
-      total_amt: "TotalAmt"
-      customer_ref: "CustomerRef.value"
-      customer_name: "CustomerRef.name"
-      payment_method_ref: "PaymentMethodRef.value"
-      deposit_to_account_ref: "DepositToAccountRef.value"
+      id: id
+      sync_token: sync_token
+      domain: domain
+      sparse: sparse
+      doc_number: doc_number
+      txn_date: txn_date
+      total_amt: total_amt
+      balance: balance
+      customer_ref_value: customer_ref_value
+      customer_ref_name: customer_ref_name
+      customer_memo_value: customer_memo_value
+      bill_email_address: bill_email_address
+      print_status: print_status
+      payment_method_ref_value: payment_method_ref_value
+      payment_method_ref_name: payment_method_ref_name
+      deposit_to_account_ref_value: deposit_to_account_ref_value
+      deposit_to_account_ref_name: deposit_to_account_ref_name
+      currency_ref_value: currency_ref_value
+      currency_ref_name: currency_ref_name
+      txn_tax_detail_total_tax: txn_tax_detail_total_tax
+      apply_tax_after_discount: apply_tax_after_discount
+      free_form_address: free_form_address
+      bill_addr_id: bill_addr_id
+      bill_addr_line1: bill_addr_line1
+      bill_addr_line2: bill_addr_line2
+      bill_addr_line3: bill_addr_line3
+      bill_addr_line4: bill_addr_line4
+      bill_addr_lat: bill_addr_lat
+      bill_addr_long: bill_addr_long
+      meta_data_create_time: meta_data_create_time
+      meta_data_last_updated_time: meta_data_last_updated_time
     types:
-      Id: string
-      TxnDate: date
-      TotalAmt: double
+      id: VARCHAR
+      sync_token: VARCHAR
+      domain: VARCHAR
+      sparse: BOOLEAN
+      doc_number: VARCHAR
+      txn_date: VARCHAR
+      total_amt: DOUBLE
+      balance: DOUBLE
+      customer_ref_value: VARCHAR
+      customer_ref_name: VARCHAR
+      customer_memo_value: VARCHAR
+      bill_email_address: VARCHAR
+      print_status: VARCHAR
+      payment_method_ref_value: VARCHAR
+      payment_method_ref_name: VARCHAR
+      deposit_to_account_ref_value: VARCHAR
+      deposit_to_account_ref_name: VARCHAR
+      currency_ref_value: VARCHAR
+      currency_ref_name: VARCHAR
+      txn_tax_detail_total_tax: DOUBLE
+      apply_tax_after_discount: BOOLEAN
+      free_form_address: BOOLEAN
+      meta_data_create_time: VARCHAR
+      meta_data_last_updated_time: VARCHAR
     synonyms:
       refund receipt: [refund, customer refund]
 
@@ -507,28 +1007,55 @@ entities:
   # ──────────────────────────────────────────────
   TimeActivity:
     fields:
-      time_activity_id: "Id"
-      txn_date: "TxnDate"
-      name_of: "NameOf"
-      employee_ref: "EmployeeRef.value"
-      employee_name: "EmployeeRef.name"
-      customer_ref: "CustomerRef.value"
-      customer_name: "CustomerRef.name"
-      item_ref: "ItemRef.value"
-      item_name: "ItemRef.name"
-      description: "Description"
-      billable_status: "BillableStatus"
-      hourly_rate: "HourlyRate"
-      hours: "Hours"
-      minutes: "Minutes"
+      id: id
+      sync_token: sync_token
+      domain: domain
+      sparse: sparse
+      txn_date: txn_date
+      name_of: name_of
+      employee_ref_value: employee_ref_value
+      employee_ref_name: employee_ref_name
+      customer_ref_value: customer_ref_value
+      customer_ref_name: customer_ref_name
+      item_ref_value: item_ref_value
+      item_ref_name: item_ref_name
+      description: description
+      billable_status: billable_status
+      taxable: taxable
+      hourly_rate: hourly_rate
+      cost_rate: cost_rate
+      hours: hours
+      minutes: minutes
+      seconds: seconds
+      time_charge_id: time_charge_id
+      meta_data_create_time: meta_data_create_time
+      meta_data_last_updated_time: meta_data_last_updated_time
     types:
-      Id: string
-      TxnDate: date
-      HourlyRate: double
-      Hours: int
-      Minutes: int
+      id: VARCHAR
+      sync_token: VARCHAR
+      domain: VARCHAR
+      sparse: BOOLEAN
+      txn_date: VARCHAR
+      name_of: VARCHAR
+      employee_ref_value: VARCHAR
+      employee_ref_name: VARCHAR
+      customer_ref_value: VARCHAR
+      customer_ref_name: VARCHAR
+      item_ref_value: VARCHAR
+      item_ref_name: VARCHAR
+      description: VARCHAR
+      billable_status: VARCHAR
+      taxable: BOOLEAN
+      hourly_rate: DOUBLE
+      cost_rate: DOUBLE
+      hours: BIGINT
+      minutes: BIGINT
+      seconds: BIGINT
+      time_charge_id: BIGINT
+      meta_data_create_time: VARCHAR
+      meta_data_last_updated_time: VARCHAR
     valid_values:
-      BillableStatus: ["Billable", "NotBillable", "HasBeenBilled"]
+      billable_status: ["Billable", "NotBillable", "HasBeenBilled"]
     synonyms:
       time activity: [time entry, timesheet, time tracking, hours worked]
 
@@ -537,813 +1064,545 @@ entities:
   # ──────────────────────────────────────────────
   Term:
     fields:
-      term_id: "Id"
-      term_name: "Name"
-      type: "Type"
-      active: "Active"
-      due_days: "DueDays"
-      discount_days: "DiscountDays"
+      id: id
+      sync_token: sync_token
+      domain: domain
+      sparse: sparse
+      name: name
+      type: type
+      active: active
+      due_days: due_days
+      discount_days: discount_days
+      meta_data_create_time: meta_data_create_time
+      meta_data_last_modified_by_ref_value: meta_data_last_modified_by_ref_value
+      meta_data_last_updated_time: meta_data_last_updated_time
     types:
-      Id: string
-      Name: string
-      DueDays: int
+      id: VARCHAR
+      sync_token: VARCHAR
+      domain: VARCHAR
+      sparse: BOOLEAN
+      name: VARCHAR
+      type: VARCHAR
+      active: BOOLEAN
+      due_days: BIGINT
+      discount_days: BIGINT
+      meta_data_create_time: VARCHAR
+      meta_data_last_modified_by_ref_value: VARCHAR
+      meta_data_last_updated_time: VARCHAR
+    valid_values:
+      type: ["STANDARD", "DATE_DRIVEN"]
     synonyms:
       term: [payment term, net days, due date terms]
 
   PaymentMethod:
     fields:
-      payment_method_id: "Id"
-      name: "Name"
-      type: "Type"
-      active: "Active"
+      id: id
+      sync_token: sync_token
+      domain: domain
+      sparse: sparse
+      name: name
+      type: type
+      active: active
+      meta_data_create_time: meta_data_create_time
+      meta_data_last_updated_time: meta_data_last_updated_time
     types:
-      Id: string
-      Name: string
-      Type: string
+      id: VARCHAR
+      sync_token: VARCHAR
+      domain: VARCHAR
+      sparse: BOOLEAN
+      name: VARCHAR
+      type: VARCHAR
+      active: BOOLEAN
+      meta_data_create_time: VARCHAR
+      meta_data_last_updated_time: VARCHAR
     valid_values:
-      Type: ["CREDIT_CARD", "NON_CREDIT_CARD"]
+      type: ["CREDIT_CARD", "NON_CREDIT_CARD"]
     synonyms:
       payment method: [payment type, method of payment]
 
   TaxAgency:
     fields:
-      tax_agency_id: "Id"
-      display_name: "DisplayName"
-      tax_tracked_on_sales: "TaxTrackedOnSales"
-      tax_tracked_on_purchases: "TaxTrackedOnPurchases"
+      id: id
+      sync_token: sync_token
+      domain: domain
+      sparse: sparse
+      display_name: display_name
+      tax_tracked_on_sales: tax_tracked_on_sales
+      tax_tracked_on_purchases: tax_tracked_on_purchases
+      tax_agency_config: tax_agency_config
+      meta_data_create_time: meta_data_create_time
+      meta_data_last_updated_time: meta_data_last_updated_time
     types:
-      Id: string
-      DisplayName: string
+      id: VARCHAR
+      sync_token: VARCHAR
+      domain: VARCHAR
+      sparse: BOOLEAN
+      display_name: VARCHAR
+      tax_tracked_on_sales: BOOLEAN
+      tax_tracked_on_purchases: BOOLEAN
+      tax_agency_config: VARCHAR
+      meta_data_create_time: VARCHAR
+      meta_data_last_updated_time: VARCHAR
     synonyms:
       tax agency: [tax authority, revenue department]
 
   TaxRate:
     fields:
-      tax_rate_id: "Id"
-      name: "Name"
-      rate_value: "RateValue"
-      active: "Active"
-      agency_ref: "AgencyRef.value"
+      id: id
+      sync_token: sync_token
+      domain: domain
+      sparse: sparse
+      name: name
+      description: description
+      active: active
+      rate_value: rate_value
+      agency_ref_value: agency_ref_value
+      special_tax_type: special_tax_type
+      display_type: display_type
+      meta_data_create_time: meta_data_create_time
+      meta_data_last_updated_time: meta_data_last_updated_time
     types:
-      Id: string
-      RateValue: double
+      id: VARCHAR
+      sync_token: VARCHAR
+      domain: VARCHAR
+      sparse: BOOLEAN
+      name: VARCHAR
+      description: VARCHAR
+      active: BOOLEAN
+      rate_value: DOUBLE
+      agency_ref_value: VARCHAR
+      special_tax_type: VARCHAR
+      display_type: VARCHAR
+      meta_data_create_time: VARCHAR
+      meta_data_last_updated_time: VARCHAR
     synonyms:
       tax rate: [tax percentage, sales tax rate]
 
   TaxCode:
     fields:
-      tax_code_id: "Id"
-      name: "Name"
-      taxable: "Taxable"
-      tax_group: "TaxGroup"
+      id: id
+      sync_token: sync_token
+      domain: domain
+      sparse: sparse
+      name: name
+      description: description
+      taxable: taxable
+      tax_group: tax_group
+      active: active
+      hidden: hidden
+      tax_code_config_type: tax_code_config_type
+      meta_data_create_time: meta_data_create_time
+      meta_data_last_updated_time: meta_data_last_updated_time
     types:
-      Id: string
-      Taxable: boolean
-      TaxGroup: boolean
+      id: VARCHAR
+      sync_token: VARCHAR
+      domain: VARCHAR
+      sparse: BOOLEAN
+      name: VARCHAR
+      description: VARCHAR
+      taxable: BOOLEAN
+      tax_group: BOOLEAN
+      active: BOOLEAN
+      hidden: BOOLEAN
+      tax_code_config_type: VARCHAR
+      meta_data_create_time: VARCHAR
+      meta_data_last_updated_time: VARCHAR
     synonyms:
       tax code: [tax category, tax classification]
 
   Department:
     fields:
-      department_id: "Id"
-      department_name: "Name"
-      fully_qualified_name: "FullyQualifiedName"
-      active: "Active"
+      id: id
+      sync_token: sync_token
+      domain: domain
+      sparse: sparse
+      name: name
+      fully_qualified_name: fully_qualified_name
+      sub_department: sub_department
+      active: active
+      meta_data_create_time: meta_data_create_time
+      meta_data_last_updated_time: meta_data_last_updated_time
     types:
-      Id: string
-      Name: string
+      id: VARCHAR
+      sync_token: VARCHAR
+      domain: VARCHAR
+      sparse: BOOLEAN
+      name: VARCHAR
+      fully_qualified_name: VARCHAR
+      sub_department: BOOLEAN
+      active: BOOLEAN
+      meta_data_create_time: VARCHAR
+      meta_data_last_updated_time: VARCHAR
     synonyms:
       department: [dept, division, business unit]
 
   CompanyInfo:
     fields:
-      company_name: "CompanyName"
-      legal_name: "LegalName"
-      company_start_date: "CompanyStartDate"
-      fiscal_year_start_month: "FiscalYearStartMonth"
-      country: "Country"
-      email: "Email.Address"
+      id: id
+      sync_token: sync_token
+      domain: domain
+      sparse: sparse
+      company_name: company_name
+      legal_name: legal_name
+      company_start_date: company_start_date
+      fiscal_year_start_month: fiscal_year_start_month
+      country: country
+      email_address: email_address
+      supported_languages: supported_languages
+      default_time_zone: default_time_zone
+      company_addr_id: company_addr_id
+      company_addr_line1: company_addr_line1
+      company_addr_city: company_addr_city
+      company_addr_country_sub_division_code: company_addr_country_sub_division_code
+      company_addr_postal_code: company_addr_postal_code
+      legal_addr_id: legal_addr_id
+      legal_addr_line1: legal_addr_line1
+      legal_addr_city: legal_addr_city
+      legal_addr_country_sub_division_code: legal_addr_country_sub_division_code
+      legal_addr_postal_code: legal_addr_postal_code
+      customer_communication_addr_id: customer_communication_addr_id
+      customer_communication_addr_line1: customer_communication_addr_line1
+      customer_communication_addr_city: customer_communication_addr_city
+      customer_communication_addr_country_sub_division_code: customer_communication_addr_country_sub_division_code
+      customer_communication_addr_postal_code: customer_communication_addr_postal_code
+      customer_communication_email_addr_address: customer_communication_email_addr_address
+      meta_data_create_time: meta_data_create_time
+      meta_data_last_updated_time: meta_data_last_updated_time
     types:
-      CompanyName: string
-      CompanyStartDate: date
+      id: VARCHAR
+      sync_token: VARCHAR
+      domain: VARCHAR
+      sparse: BOOLEAN
+      company_name: VARCHAR
+      legal_name: VARCHAR
+      company_start_date: VARCHAR
+      fiscal_year_start_month: VARCHAR
+      country: VARCHAR
+      email_address: VARCHAR
+      supported_languages: VARCHAR
+      default_time_zone: VARCHAR
+      meta_data_create_time: VARCHAR
+      meta_data_last_updated_time: VARCHAR
+
+  ExchangeRate:
+    fields:
+      source_currency_code: source_currency_code
+      target_currency_code: target_currency_code
+      rate: rate
+      as_of_date: as_of_date
+      meta_data_last_updated_time: meta_data_last_updated_time
+    types:
+      source_currency_code: VARCHAR
+      target_currency_code: VARCHAR
+      rate: DOUBLE
+      as_of_date: VARCHAR
+      meta_data_last_updated_time: VARCHAR
+
+  Preferences:
+    fields:
+      id: id
+      sync_token: sync_token
+      domain: domain
+      sparse: sparse
+      accounting_info_prefs_use_account_numbers: accounting_info_prefs_use_account_numbers
+      accounting_info_prefs_track_departments: accounting_info_prefs_track_departments
+      accounting_info_prefs_class_tracking_per_txn: accounting_info_prefs_class_tracking_per_txn
+      accounting_info_prefs_class_tracking_per_txn_line: accounting_info_prefs_class_tracking_per_txn_line
+      accounting_info_prefs_first_month_of_fiscal_year: accounting_info_prefs_first_month_of_fiscal_year
+      accounting_info_prefs_tax_year_month: accounting_info_prefs_tax_year_month
+      accounting_info_prefs_tax_form: accounting_info_prefs_tax_form
+      accounting_info_prefs_customer_terminology: accounting_info_prefs_customer_terminology
+      product_and_services_prefs_for_sales: product_and_services_prefs_for_sales
+      product_and_services_prefs_for_purchase: product_and_services_prefs_for_purchase
+      product_and_services_prefs_quantity_with_price_and_rate: product_and_services_prefs_quantity_with_price_and_rate
+      product_and_services_prefs_quantity_on_hand: product_and_services_prefs_quantity_on_hand
+      product_and_services_prefs_revenue_recognition: product_and_services_prefs_revenue_recognition
+      product_and_services_prefs_revenue_recognition_frequency: product_and_services_prefs_revenue_recognition_frequency
+      sales_forms_prefs_using_progress_invoicing: sales_forms_prefs_using_progress_invoicing
+      sales_forms_prefs_custom_txn_numbers: sales_forms_prefs_custom_txn_numbers
+      sales_forms_prefs_email_copy_to_company: sales_forms_prefs_email_copy_to_company
+      sales_forms_prefs_allow_deposit: sales_forms_prefs_allow_deposit
+      sales_forms_prefs_allow_discount: sales_forms_prefs_allow_discount
+      sales_forms_prefs_default_discount_account: sales_forms_prefs_default_discount_account
+      sales_forms_prefs_allow_estimates: sales_forms_prefs_allow_estimates
+      sales_forms_prefs_e_transaction_enabled_status: sales_forms_prefs_e_transaction_enabled_status
+      sales_forms_prefs_e_transaction_attach_pdf: sales_forms_prefs_e_transaction_attach_pdf
+      sales_forms_prefs_e_transaction_payment_enabled: sales_forms_prefs_e_transaction_payment_enabled
+      sales_forms_prefs_ipn_support_enabled: sales_forms_prefs_ipn_support_enabled
+      sales_forms_prefs_allow_service_date: sales_forms_prefs_allow_service_date
+      sales_forms_prefs_allow_shipping: sales_forms_prefs_allow_shipping
+      sales_forms_prefs_default_terms_value: sales_forms_prefs_default_terms_value
+      sales_forms_prefs_auto_apply_credit: sales_forms_prefs_auto_apply_credit
+      sales_forms_prefs_auto_apply_payments: sales_forms_prefs_auto_apply_payments
+      sales_forms_prefs_using_price_levels: sales_forms_prefs_using_price_levels
+      sales_forms_prefs_default_customer_message: sales_forms_prefs_default_customer_message
+      email_messages_prefs_invoice_message_subject: email_messages_prefs_invoice_message_subject
+      email_messages_prefs_invoice_message_message: email_messages_prefs_invoice_message_message
+      email_messages_prefs_estimate_message_subject: email_messages_prefs_estimate_message_subject
+      email_messages_prefs_estimate_message_message: email_messages_prefs_estimate_message_message
+      email_messages_prefs_sales_receipt_message_subject: email_messages_prefs_sales_receipt_message_subject
+      email_messages_prefs_sales_receipt_message_message: email_messages_prefs_sales_receipt_message_message
+      email_messages_prefs_statement_message_subject: email_messages_prefs_statement_message_subject
+      email_messages_prefs_statement_message_message: email_messages_prefs_statement_message_message
+      vendor_and_purchases_prefs_tracking_by_customer: vendor_and_purchases_prefs_tracking_by_customer
+      vendor_and_purchases_prefs_billable_expense_tracking: vendor_and_purchases_prefs_billable_expense_tracking
+      time_tracking_prefs_use_services: time_tracking_prefs_use_services
+      time_tracking_prefs_default_time_item_value: time_tracking_prefs_default_time_item_value
+      time_tracking_prefs_bill_customers: time_tracking_prefs_bill_customers
+      time_tracking_prefs_show_bill_rate_to_all: time_tracking_prefs_show_bill_rate_to_all
+      time_tracking_prefs_work_week_start_date: time_tracking_prefs_work_week_start_date
+      time_tracking_prefs_mark_time_entries_billable: time_tracking_prefs_mark_time_entries_billable
+      tax_prefs_using_sales_tax: tax_prefs_using_sales_tax
+      tax_prefs_tax_group_code_ref_value: tax_prefs_tax_group_code_ref_value
+      currency_prefs_multi_currency_enabled: currency_prefs_multi_currency_enabled
+      currency_prefs_home_currency_value: currency_prefs_home_currency_value
+      report_prefs_report_basis: report_prefs_report_basis
+      report_prefs_calc_aging_report_from_txn_date: report_prefs_calc_aging_report_from_txn_date
+      meta_data_create_time: meta_data_create_time
+      meta_data_last_updated_time: meta_data_last_updated_time
+    types:
+      id: VARCHAR
+      sync_token: VARCHAR
+      domain: VARCHAR
+      sparse: BOOLEAN
+      accounting_info_prefs_use_account_numbers: BOOLEAN
+      accounting_info_prefs_track_departments: BOOLEAN
+      accounting_info_prefs_class_tracking_per_txn: BOOLEAN
+      accounting_info_prefs_class_tracking_per_txn_line: BOOLEAN
+      accounting_info_prefs_first_month_of_fiscal_year: VARCHAR
+      accounting_info_prefs_tax_year_month: VARCHAR
+      accounting_info_prefs_tax_form: VARCHAR
+      accounting_info_prefs_customer_terminology: VARCHAR
+      product_and_services_prefs_for_sales: BOOLEAN
+      product_and_services_prefs_for_purchase: BOOLEAN
+      product_and_services_prefs_quantity_with_price_and_rate: BOOLEAN
+      product_and_services_prefs_quantity_on_hand: BOOLEAN
+      product_and_services_prefs_revenue_recognition: BOOLEAN
+      product_and_services_prefs_revenue_recognition_frequency: VARCHAR
+      sales_forms_prefs_using_progress_invoicing: BOOLEAN
+      sales_forms_prefs_custom_txn_numbers: BOOLEAN
+      sales_forms_prefs_email_copy_to_company: BOOLEAN
+      sales_forms_prefs_allow_deposit: BOOLEAN
+      sales_forms_prefs_allow_discount: BOOLEAN
+      sales_forms_prefs_default_discount_account: VARCHAR
+      sales_forms_prefs_allow_estimates: BOOLEAN
+      sales_forms_prefs_e_transaction_enabled_status: VARCHAR
+      sales_forms_prefs_e_transaction_attach_pdf: BOOLEAN
+      sales_forms_prefs_e_transaction_payment_enabled: BOOLEAN
+      sales_forms_prefs_ipn_support_enabled: BOOLEAN
+      sales_forms_prefs_allow_service_date: BOOLEAN
+      sales_forms_prefs_allow_shipping: BOOLEAN
+      sales_forms_prefs_default_terms_value: VARCHAR
+      sales_forms_prefs_auto_apply_credit: BOOLEAN
+      sales_forms_prefs_auto_apply_payments: BOOLEAN
+      sales_forms_prefs_using_price_levels: BOOLEAN
+      sales_forms_prefs_default_customer_message: VARCHAR
+      vendor_and_purchases_prefs_tracking_by_customer: BOOLEAN
+      vendor_and_purchases_prefs_billable_expense_tracking: BOOLEAN
+      time_tracking_prefs_use_services: BOOLEAN
+      time_tracking_prefs_default_time_item_value: VARCHAR
+      time_tracking_prefs_bill_customers: BOOLEAN
+      time_tracking_prefs_show_bill_rate_to_all: BOOLEAN
+      time_tracking_prefs_work_week_start_date: VARCHAR
+      time_tracking_prefs_mark_time_entries_billable: BOOLEAN
+      tax_prefs_using_sales_tax: BOOLEAN
+      tax_prefs_tax_group_code_ref_value: VARCHAR
+      currency_prefs_multi_currency_enabled: BOOLEAN
+      currency_prefs_home_currency_value: VARCHAR
+      report_prefs_report_basis: VARCHAR
+      report_prefs_calc_aging_report_from_txn_date: BOOLEAN
+      meta_data_create_time: VARCHAR
+      meta_data_last_updated_time: VARCHAR
+
+  # Empty entities (no data in cache)
+  VendorCredit:
+    fields: {}
+    types: {}
+
+  Transfer:
+    fields: {}
+    types: {}
+
+  Class:
+    fields: {}
+    types: {}
+
+  Budget:
+    fields: {}
+    types: {}
+
+  Attachable:
+    fields: {}
+    types: {}
 
 # ──────────────────────────────────────────────
-# Flattened fields (for splitter/orchestrator metadata merging)
+# Flat fields section (for splitter/orchestrator metadata merging)
+# Uses actual cache snake_case column names
 # ──────────────────────────────────────────────
 fields:
   # Account
-  account_id: "Account.Id"
-  account_name: "Account.Name"
-  account_type: "Account.AccountType"
-  account_classification: "Account.Classification"
-  account_balance: "Account.CurrentBalance"
+  account_id: id
+  account_name: name
+  account_type: account_type
+  account_sub_type: account_sub_type
+  account_classification: classification
+  account_balance: current_balance
+  account_balance_with_subs: current_balance_with_sub_accounts
+  account_sub_account: sub_account
+  account_fully_qualified_name: fully_qualified_name
   # Customer
-  customer_id: "Customer.Id"
-  customer_name: "Customer.DisplayName"
-  customer_company: "Customer.CompanyName"
-  customer_email: "Customer.PrimaryEmailAddr.Address"
-  customer_balance: "Customer.Balance"
-  customer_taxable: "Customer.Taxable"
+  customer_id: id
+  customer_name: display_name
+  customer_company: company_name
+  customer_email: primary_email_addr_address
+  customer_balance: balance
+  customer_taxable: taxable
+  customer_active: active
+  customer_given_name: given_name
+  customer_family_name: family_name
   # Vendor
-  vendor_id: "Vendor.Id"
-  vendor_name: "Vendor.DisplayName"
-  vendor_balance: "Vendor.Balance"
-  vendor_1099: "Vendor.Vendor1099"
+  vendor_id: id
+  vendor_name: display_name
+  vendor_balance: balance
+  vendor_1099: vendor1099
+  vendor_bill_rate: bill_rate
+  vendor_company: company_name
   # Employee
-  employee_id: "Employee.Id"
-  employee_name: "Employee.DisplayName"
+  employee_id: id
+  employee_name: display_name
+  employee_given_name: given_name
+  employee_family_name: family_name
+  employee_active: active
+  employee_billable_time: billable_time
+  employee_hired_date: hired_date
   # Item
-  item_id: "Item.Id"
-  item_name: "Item.Name"
-  item_type: "Item.Type"
-  item_price: "Item.UnitPrice"
+  item_id: id
+  item_name: name
+  item_type: type
+  item_price: unit_price
+  item_purchase_cost: purchase_cost
+  item_taxable: taxable
+  item_active: active
   # Invoice
-  invoice_id: "Invoice.Id"
-  invoice_number: "Invoice.DocNumber"
-  invoice_date: "Invoice.TxnDate"
-  invoice_due_date: "Invoice.DueDate"
-  invoice_total: "Invoice.TotalAmt"
-  invoice_balance: "Invoice.Balance"
-  invoice_customer: "Invoice.CustomerRef.name"
+  invoice_id: id
+  invoice_number: doc_number
+  invoice_date: txn_date
+  invoice_due_date: due_date
+  invoice_total: total_amt
+  invoice_balance: balance
+  invoice_customer: customer_ref_name
+  invoice_customer_id: customer_ref_value
+  invoice_print_status: print_status
+  invoice_email_status: email_status
   # Estimate
-  estimate_id: "Estimate.Id"
-  estimate_total: "Estimate.TotalAmt"
-  estimate_status: "Estimate.TxnStatus"
-  # Bill
-  bill_id: "Bill.Id"
-  bill_date: "Bill.TxnDate"
-  bill_due_date: "Bill.DueDate"
-  bill_total: "Bill.TotalAmt"
-  bill_balance: "Bill.Balance"
-  bill_vendor: "Bill.VendorRef.name"
+  estimate_id: id
+  estimate_number: doc_number
+  estimate_date: txn_date
+  estimate_total: total_amt
+  estimate_status: txn_status
+  estimate_customer: customer_ref_name
+  # SalesReceipt
+  sales_receipt_id: id
+  sales_receipt_date: txn_date
+  sales_receipt_total: total_amt
+  sales_receipt_customer: customer_ref_name
+  # CreditMemo
+  credit_memo_id: id
+  credit_memo_date: txn_date
+  credit_memo_total: total_amt
+  credit_memo_remaining: remaining_credit
+  credit_memo_customer: customer_ref_name
   # Payment
-  payment_id: "Payment.Id"
-  payment_date: "Payment.TxnDate"
-  payment_amount: "Payment.TotalAmt"
-  payment_customer: "Payment.CustomerRef.name"
+  payment_id: id
+  payment_date: txn_date
+  payment_amount: total_amt
+  payment_unapplied: unapplied_amt
+  payment_customer: customer_ref_name
+  # Bill
+  bill_id: id
+  bill_date: txn_date
+  bill_due_date: due_date
+  bill_total: total_amt
+  bill_balance: balance
+  bill_vendor: vendor_ref_name
+  bill_vendor_id: vendor_ref_value
+  # BillPayment
+  bill_payment_id: id
+  bill_payment_date: txn_date
+  bill_payment_total: total_amt
+  bill_payment_type: pay_type
+  bill_payment_vendor: vendor_ref_name
+  # PurchaseOrder
+  purchase_order_id: id
+  purchase_order_date: txn_date
+  purchase_order_total: total_amt
+  purchase_order_status: po_status
+  purchase_order_vendor: vendor_ref_name
   # Purchase
-  purchase_total: "Purchase.TotalAmt"
-  purchase_type: "Purchase.PaymentType"
+  purchase_id: id
+  purchase_date: txn_date
+  purchase_total: total_amt
+  purchase_type: payment_type
+  purchase_account: account_ref_name
+  purchase_entity: entity_ref_name
   # Deposit
-  deposit_total: "Deposit.TotalAmt"
-  deposit_account: "Deposit.DepositToAccountRef.name"
-  # Time
-  time_hours: "TimeActivity.Hours"
-  time_rate: "TimeActivity.HourlyRate"
-  time_employee: "TimeActivity.EmployeeRef.name"
-  time_customer: "TimeActivity.CustomerRef.name"
-
-# ──────────────────────────────────────────────
-# Relationships (entity cross-references)
-# ──────────────────────────────────────────────
-relationships:
-  - from: Invoice
-    to: Customer
-    via: CustomerRef.value
-    type: many_to_one
-  - from: Invoice
-    to: Term
-    via: SalesTermRef.value
-    type: many_to_one
-  - from: Estimate
-    to: Customer
-    via: CustomerRef.value
-    type: many_to_one
-  - from: Estimate
-    to: Invoice
-    via: LinkedTxn
-    type: one_to_one
-  - from: Payment
-    to: Customer
-    via: CustomerRef.value
-    type: many_to_one
-  - from: Payment
-    to: Invoice
-    via: Line.LinkedTxn
-    type: many_to_many
-  - from: Payment
-    to: Deposit
-    via: LinkedTxn
-    type: many_to_one
-  - from: SalesReceipt
-    to: Customer
-    via: CustomerRef.value
-    type: many_to_one
-  - from: SalesReceipt
-    to: Deposit
-    via: LinkedTxn
-    type: many_to_one
-  - from: CreditMemo
-    to: Customer
-    via: CustomerRef.value
-    type: many_to_one
-  - from: RefundReceipt
-    to: Customer
-    via: CustomerRef.value
-    type: many_to_one
-  - from: Bill
-    to: Vendor
-    via: VendorRef.value
-    type: many_to_one
-  - from: Bill
-    to: Account
-    via: APAccountRef.value
-    type: many_to_one
-  - from: BillPayment
-    to: Vendor
-    via: VendorRef.value
-    type: many_to_one
-  - from: BillPayment
-    to: Bill
-    via: Line.LinkedTxn
-    type: many_to_many
-  - from: PurchaseOrder
-    to: Vendor
-    via: VendorRef.value
-    type: many_to_one
-  - from: PurchaseOrder
-    to: Bill
-    via: LinkedTxn
-    type: one_to_one
-  - from: Purchase
-    to: Account
-    via: AccountRef.value
-    type: many_to_one
-  - from: Purchase
-    to: Vendor
-    via: EntityRef.value
-    type: many_to_one
-  - from: Deposit
-    to: Account
-    via: DepositToAccountRef.value
-    type: many_to_one
-  - from: JournalEntry
-    to: Account
-    via: Line.JournalEntryLineDetail.AccountRef.value
-    type: many_to_many
-  - from: TimeActivity
-    to: Employee
-    via: EmployeeRef.value
-    type: many_to_one
-  - from: TimeActivity
-    to: Customer
-    via: CustomerRef.value
-    type: many_to_one
-  - from: TimeActivity
-    to: Item
-    via: ItemRef.value
-    type: many_to_one
-  - from: Item
-    to: Account
-    via: IncomeAccountRef.value
-    type: many_to_one
-  - from: TaxRate
-    to: TaxAgency
-    via: AgencyRef.value
-    type: many_to_one
-  - from: TaxCode
-    to: TaxRate
-    via: SalesTaxRateList.TaxRateDetail.TaxRateRef.value
-    type: many_to_many
-
-# ──────────────────────────────────────────────
-# Synonyms (merged into splitter metadata)
-# ──────────────────────────────────────────────
-synonyms:
-  invoice: [sales invoice, customer invoice, bill to customer, ar invoice]
-  bill: [vendor bill, ap bill, vendor invoice, accounts payable]
-  payment: [customer payment, payment received, cash receipt]
-  bill payment: [vendor payment, pay bill, ap payment]
-  purchase: [expense, expenditure, spend, charge]
-  deposit: [bank deposit, bank transaction]
-  estimate: [quote, proposal, bid]
-  credit memo: [credit note, customer credit]
-  refund: [refund receipt, customer refund]
-  sales receipt: [cash sale, pos sale, receipt]
-  purchase order: [po, order to vendor]
-  journal entry: [journal, je, adjusting entry]
-  time activity: [timesheet, time entry, hours worked, time tracking]
-  customer: [client, buyer, purchaser]
-  vendor: [supplier, provider, seller]
-  employee: [worker, staff, team member]
-  item: [product, service, sku, merchandise]
-  account: [gl account, ledger account, chart of accounts, coa]
-  total amount: [total, amount, sum, invoice total, bill total]
-  balance: [open balance, outstanding, amount due, unpaid]
-  overdue: [past due, late, delinquent]
-  tax: [sales tax, tax rate, tax code, tax amount]
-  department: [dept, division, business unit]
-  payment method: [payment type, method of payment]
-  payment terms: [net days, term, due date terms]
-
-# ──────────────────────────────────────────────
-# Query hints (QuickBooks IDS query examples)
-# ──────────────────────────────────────────────
-query_hints:
-  select_all_customers: |
-    select * from Customer startposition 1 maxresults 100
-  select_open_invoices: |
-    select * from Invoice where Balance > '0' startposition 1 maxresults 100
-  select_overdue_invoices: |
-    select * from Invoice where DueDate < '2026-03-14' and Balance > '0'
-  select_unpaid_bills: |
-    select * from Bill where Balance > '0' startposition 1 maxresults 100
-  select_items: |
-    select * from Item startposition 1 maxresults 100
-  select_expenses_by_vendor: |
-    select * from Purchase startposition 1 maxresults 100
-  select_time_by_employee: |
-    select * from TimeActivity startposition 1 maxresults 100
-
-# ──────────────────────────────────────────────
-# Metrics
-# ──────────────────────────────────────────────
-metrics:
-  total_revenue:
-    definition: "Sum of TotalAmt across all Invoices"
-  total_expenses:
-    definition: "Sum of TotalAmt across all Bills and Purchases"
-  accounts_receivable:
-    definition: "Sum of Balance across all Invoices where Balance > 0"
-  accounts_payable:
-    definition: "Sum of Balance across all Bills where Balance > 0"
-  net_income:
-    definition: "Total Revenue minus Total Expenses"
-  customer_count:
-    definition: "Count of active Customers"
-  vendor_count:
-    definition: "Count of active Vendors"
-  overdue_invoices:
-    definition: "Invoices where DueDate < today and Balance > 0"
-  billable_hours:
-    definition: "Sum of Hours from TimeActivity where BillableStatus is Billable"
+  deposit_id: id
+  deposit_date: txn_date
+  deposit_total: total_amt
+  deposit_account: deposit_to_account_ref_name
+  # JournalEntry
+  journal_entry_id: id
+  journal_entry_date: txn_date
+  journal_entry_total: total_amt
+  journal_entry_adjustment: adjustment
+  # RefundReceipt
+  refund_receipt_id: id
+  refund_receipt_date: txn_date
+  refund_receipt_total: total_amt
+  refund_receipt_customer: customer_ref_name
+  # TimeActivity
+  time_activity_id: id
+  time_hours: hours
+  time_minutes: minutes
+  time_rate: hourly_rate
+  time_employee: employee_ref_name
+  time_customer: customer_ref_name
+  time_billable_status: billable_status
+  # Term
+  term_id: id
+  term_name: name
+  term_due_days: due_days
+  # PaymentMethod
+  payment_method_id: id
+  payment_method_name: name
+  payment_method_type: type
+  # TaxAgency
+  tax_agency_id: id
+  tax_agency_name: display_name
+  # TaxRate
+  tax_rate_id: id
+  tax_rate_name: name
+  tax_rate_value: rate_value
+  # TaxCode
+  tax_code_id: id
+  tax_code_name: name
+  tax_code_taxable: taxable
+  # Department
+  department_id: id
+  department_name: name
+  department_fully_qualified_name: fully_qualified_name
+  # CompanyInfo
+  company_name: company_name
+  company_legal_name: legal_name
+  company_start_date: company_start_date
+  company_country: country
+  company_email: email_address
+  # ExchangeRate
+  exchange_rate_source: source_currency_code
+  exchange_rate_target: target_currency_code
+  exchange_rate_value: rate
+  exchange_rate_date: as_of_date
 
 meta:
   source_type: "api"
   source_api: "QuickBooks Online IDS Query API"
-  api_base: "http://localhost:8080/api/query"
-  reports_api_base: "http://localhost:8080/api/reports"
-  notes:
-    - "Data is fetched via QuickBooks IDS query API, not from a local file."
-    - "Each entity maps to a QuickBooks IDS queryable resource."
-    - "Relationships are established via Ref fields (e.g., CustomerRef.value)."
-    - "Line items within transactions contain nested detail (SalesItemLineDetail, AccountBasedExpenseLineDetail)."
-    - "Reports are fetched via GET /api/reports/{reportName} — use query params for date/filter."
-
-# ──────────────────────────────────────────────
-# Reports (live data from GET /api/reports/{name})
-# All reports return: Header, Columns, Rows
-# ──────────────────────────────────────────────
-reports:
-
-  AccountList:
-    description: "Chart of accounts with type, detail type, and current balance."
-    default_date_macro: ~
-    row_structure: flat
-    columns:
-      - title: "Account"
-        col_type: String
-        description: "Account name (fully qualified, colon-separated for sub-accounts)"
-      - title: "Type"
-        col_type: String
-        description: "Top-level account type classification"
-        enum:
-          - "Accounts payable (A/P)"
-          - "Accounts receivable (A/R)"
-          - "Bank"
-          - "Cost of Goods Sold"
-          - "Credit Card"
-          - "Equity"
-          - "Expenses"
-          - "Fixed Assets"
-          - "Income"
-          - "Long Term Liabilities"
-          - "Other Current Assets"
-          - "Other Current Liabilities"
-          - "Other Expense"
-          - "Other Income"
-      - title: "Detail type"
-        col_type: String
-        description: "Sub-classification within the account type"
-        enum:
-          - "Accounts Payable (A/P)"
-          - "Accounts Receivable (A/R)"
-          - "Accumulated Depreciation"
-          - "Advertising/Promotional"
-          - "Auto"
-          - "Bank Charges"
-          - "Checking"
-          - "Credit Card"
-          - "Depreciation"
-          - "Discounts/Refunds Given"
-          - "Dues & subscriptions"
-          - "Entertainment Meals"
-          - "Equipment Rental"
-          - "Global Tax Payable"
-          - "Insurance"
-          - "Interest Earned"
-          - "Inventory"
-          - "Legal & Professional Fees"
-          - "Office/General Administrative Expenses"
-          - "Opening Balance Equity"
-          - "Other Current Assets"
-          - "Other Current Liabilities"
-          - "Other Long Term Liabilities"
-          - "Other Miscellaneous Expense"
-          - "Other Miscellaneous Income"
-          - "Other Miscellaneous Service Cost"
-          - "Other Primary Income"
-          - "Penalties & Settlements"
-          - "Prepaid Expenses"
-          - "Rent or Lease of Buildings"
-          - "Repair & Maintenance"
-          - "Retained Earnings"
-          - "Sales of Product Income"
-          - "Savings"
-          - "Service/Fee Income"
-          - "Supplies & Materials"
-          - "Supplies & Materials - COGS"
-          - "Taxes Paid"
-          - "Travel"
-          - "Travel Meals"
-          - "Unapplied Cash Bill Payment Expense"
-          - "Unapplied Cash Payment Income"
-          - "Undeposited Funds"
-          - "Utilities"
-          - "Vehicles"
-      - title: "Description"
-        col_type: String
-        description: "Optional free-text account description"
-      - title: "Balance"
-        col_type: Money
-        description: "Current account balance"
-    filter_params: []
-    synonyms: ["chart of accounts", "coa", "account list", "gl accounts"]
-
-  AgedPayableDetail:
-    description: "Line-by-line unpaid bills grouped by vendor and aging bucket."
-    default_date_macro: today
-    row_structure: grouped_by_vendor
-    columns:
-      - { title: "Date",         col_type: Date,   description: "Bill date" }
-      - title: "Transaction Type"
-        col_type: String
-        description: "Type of payable transaction"
-        enum: ["Bill"]
-      - { title: "Num",          col_type: String, description: "Reference/transaction number" }
-      - { title: "Vendor",       col_type: String, description: "Vendor name" }
-      - { title: "Due Date",     col_type: Date,   description: "Payment due date" }
-      - { title: "Past Due",     col_type: Number, description: "Number of days past due" }
-      - { title: "Amount",       col_type: Money,  description: "Original bill amount" }
-      - { title: "Open Balance", col_type: Money,  description: "Unpaid balance remaining" }
-    filter_params: [report_date, aging_period, num_periods]
-    synonyms: ["ap detail", "bills detail", "unpaid bills detail"]
-
-  AgedPayables:
-    description: "Summary of amounts owed to vendors grouped by aging bucket."
-    default_date_macro: today
-    row_structure: flat
-    columns:
-      - { title: "Vendor",      col_type: Vendor, description: "Vendor name" }
-      - { title: "Current",     col_type: Money,  description: "Amount not yet due" }
-      - { title: "1 - 30",      col_type: Money,  description: "1–30 days past due" }
-      - { title: "31 - 60",     col_type: Money,  description: "31–60 days past due" }
-      - { title: "61 - 90",     col_type: Money,  description: "61–90 days past due" }
-      - { title: "91 and over", col_type: Money,  description: "Over 90 days past due" }
-      - { title: "Total",       col_type: Money,  description: "Total outstanding AP" }
-    filter_params: [report_date, aging_period, num_periods]
-    synonyms: ["ap summary", "accounts payable", "aged ap", "payables aging"]
-
-  AgedReceivableDetail:
-    description: "Line-by-line open invoices grouped by customer and aging bucket."
-    default_date_macro: today
-    row_structure: grouped_by_customer
-    columns:
-      - { title: "Date",         col_type: Date,   description: "Invoice date" }
-      - title: "Transaction Type"
-        col_type: String
-        description: "Type of receivable transaction"
-        enum: ["Invoice"]
-      - { title: "Num",          col_type: String, description: "Invoice number" }
-      - { title: "Customer",     col_type: String, description: "Customer name" }
-      - { title: "Due Date",     col_type: Date,   description: "Payment due date" }
-      - { title: "Amount",       col_type: Money,  description: "Original invoice amount" }
-      - { title: "Open Balance", col_type: Money,  description: "Unpaid balance remaining" }
-    filter_params: [report_date, aging_period, num_periods]
-    synonyms: ["ar detail", "invoice detail", "unpaid invoices detail", "overdue invoices detail"]
-
-  AgedReceivables:
-    description: "Summary of amounts owed by customers grouped by aging bucket."
-    default_date_macro: today
-    row_structure: flat
-    columns:
-      - { title: "Customer",    col_type: Customer, description: "Customer name" }
-      - { title: "Current",     col_type: Money,    description: "Amount not yet due" }
-      - { title: "1 - 30",      col_type: Money,    description: "1–30 days past due" }
-      - { title: "31 - 60",     col_type: Money,    description: "31–60 days past due" }
-      - { title: "61 - 90",     col_type: Money,    description: "61–90 days past due" }
-      - { title: "91 and over", col_type: Money,    description: "Over 90 days past due" }
-      - { title: "Total",       col_type: Money,    description: "Total outstanding AR" }
-    filter_params: [report_date, aging_period, num_periods]
-    synonyms: ["ar summary", "accounts receivable", "aged ar", "receivables aging", "who owes us"]
-
-  BalanceSheet:
-    description: "Assets, liabilities, and equity as of a given date."
-    default_date_macro: "this calendar year-to-date"
-    row_structure: sectioned
-    columns:
-      - { title: "Account", col_type: Account, description: "Account name" }
-      - { title: "Total",   col_type: Money,   description: "Account balance" }
-    filter_params: [date_macro, start_date, end_date, accounting_method]
-    synonyms: ["balance sheet", "bs", "assets and liabilities", "net worth", "equity report"]
-
-  CashFlow:
-    description: "Operating, investing, and financing cash movements over a period."
-    default_date_macro: "this calendar year-to-date"
-    row_structure: sectioned
-    columns:
-      - { title: "Account", col_type: Account, description: "Account name" }
-      - { title: "Total",   col_type: Money,   description: "Cash movement amount" }
-    filter_params: [date_macro, start_date, end_date]
-    synonyms: ["cash flow", "cash flow statement", "operating cash", "cash position"]
-
-  ClassSales:
-    description: "Sales broken down by class dimension."
-    default_date_macro: "this month-to-date"
-    row_structure: grouped_by_class
-    columns:
-      - { title: "Class", col_type: Class, description: "Class/segment name" }
-    filter_params: [date_macro, start_date, end_date, summarize_column_by]
-    synonyms: ["class sales", "sales by class", "segment sales"]
-
-  CustomerBalance:
-    description: "Outstanding balance owed by each customer."
-    default_date_macro: all
-    row_structure: flat
-    columns:
-      - { title: "Customer", col_type: Customer, description: "Customer name" }
-      - { title: "Total",    col_type: Money,    description: "Outstanding balance" }
-    filter_params: [customer]
-    synonyms: ["customer balance", "outstanding invoices by customer", "customer ar"]
-
-  CustomerBalanceDetail:
-    description: "Transaction-level open items per customer with running balance."
-    default_date_macro: all
-    row_structure: grouped_by_customer
-    columns:
-      - { title: "Date",         col_type: Date,  description: "Transaction date" }
-      - title: "Transaction Type"
-        col_type: String
-        description: "Type of customer-facing transaction"
-        enum: ["Invoice", "Payment", "Credit Memo", "Sales Receipt", "Refund"]
-      - { title: "Num",          col_type: String, description: "Transaction reference number" }
-      - { title: "Due Date",     col_type: Date,   description: "Payment due date" }
-      - { title: "Amount",       col_type: Money,  description: "Transaction amount" }
-      - { title: "Open Balance", col_type: Money,  description: "Unpaid balance" }
-      - { title: "Balance",      col_type: Money,  description: "Running balance" }
-    filter_params: [customer]
-    synonyms: ["customer balance detail", "ar detail by customer", "invoice aging detail"]
-
-  CustomerIncome:
-    description: "Income, expenses, and net income attributable to each customer."
-    default_date_macro: "this calendar year-to-date"
-    row_structure: grouped_by_customer
-    columns:
-      - { title: "Customer",    col_type: Customer, description: "Customer name" }
-      - { title: "Income",      col_type: Money,    description: "Total income from customer" }
-      - { title: "Expenses",    col_type: Money,    description: "Total expenses for customer" }
-      - { title: "Net Income",  col_type: Money,    description: "Income minus Expenses" }
-    filter_params: [date_macro, start_date, end_date, customer]
-    synonyms: ["customer income", "customer profitability", "income by customer", "revenue by customer"]
-
-  CustomerSales:
-    description: "Sales totals grouped by customer and item."
-    default_date_macro: "this month-to-date"
-    row_structure: grouped_by_customer
-    columns:
-      - { title: "Customer", col_type: Customer, description: "Customer name" }
-    filter_params: [date_macro, start_date, end_date, customer, summarize_column_by]
-    synonyms: ["customer sales", "sales by customer", "revenue by customer"]
-
-  DepartmentSales:
-    description: "Sales totals grouped by department/location."
-    default_date_macro: "this month-to-date"
-    row_structure: grouped_by_department
-    columns:
-      - { title: "Department", col_type: Department, description: "Department or location name" }
-    filter_params: [date_macro, start_date, end_date, department, summarize_column_by]
-    synonyms: ["department sales", "location sales", "sales by department"]
-
-  GeneralLedger:
-    description: "Every transaction posted to each account with running balance."
-    default_date_macro: "this month-to-date"
-    row_structure: grouped_by_account
-    columns:
-      - { title: "Date",             col_type: Date,   description: "Transaction date" }
-      - title: "Transaction Type"
-        col_type: String
-        description: "Type of transaction that generated the journal line"
-        enum:
-          - "Bill"
-          - "Bill Payment (Check)"
-          - "Bill Payment (Credit Card)"
-          - "Cash Expense"
-          - "Check"
-          - "Credit Card Credit"
-          - "Credit Card Expense"
-          - "Credit Memo"
-          - "Deposit"
-          - "Expense"
-          - "Inventory Qty Adjust"
-          - "Invoice"
-          - "Journal Entry"
-          - "Payment"
-          - "Refund"
-          - "Sales Receipt"
-          - "Sales Tax Payment"
-      - { title: "Num",              col_type: String, description: "Transaction number" }
-      - { title: "Name",             col_type: String, description: "Customer, vendor, or employee name" }
-      - { title: "Memo/Description", col_type: String, description: "Transaction memo or description" }
-      - { title: "Split",            col_type: String, description: "Offsetting account name" }
-      - { title: "Amount",           col_type: Money,  description: "Debit or credit amount" }
-      - { title: "Balance",          col_type: Money,  description: "Running account balance" }
-    filter_params: [date_macro, start_date, end_date, accounting_method, columns]
-    synonyms: ["general ledger", "gl", "ledger", "all transactions by account"]
-
-  InventoryValuationDetail:
-    description: "Every inventory transaction with quantity and cost movement."
-    default_date_macro: "this month-to-date"
-    row_structure: grouped_by_item
-    columns:
-      - { title: "Date",           col_type: Date,   description: "Transaction date" }
-      - title: "Transaction Type"
-        col_type: String
-        description: "Type of transaction affecting inventory quantity or cost"
-        enum:
-          - "Bill"
-          - "Check"
-          - "Inventory Qty Adjust"
-          - "Invoice"
-      - { title: "Num",            col_type: String, description: "Transaction number" }
-      - { title: "Name",           col_type: String, description: "Customer or vendor name" }
-      - { title: "Qty",            col_type: Number, description: "Quantity change (positive = in, negative = out)" }
-      - { title: "Rate",           col_type: Money,  description: "Unit cost" }
-      - { title: "Inventory Cost", col_type: Money,  description: "Cost of goods for this transaction" }
-      - { title: "Qty On Hand",    col_type: Number, description: "Quantity on hand after transaction" }
-      - { title: "Asset Value",    col_type: Money,  description: "Total inventory value after transaction" }
-    filter_params: [date_macro, start_date, end_date, item]
-    synonyms: ["inventory detail", "stock movement", "cogs detail"]
-
-  InventoryValuationSummary:
-    description: "Current inventory on-hand quantity and value per item."
-    default_date_macro: today
-    row_structure: flat
-    columns:
-      - { title: "Product/Service", col_type: ProductsAndService, description: "Item name" }
-      - { title: "SKU",             col_type: String,             description: "Stock-keeping unit code" }
-      - { title: "Qty",             col_type: Number,             description: "Quantity on hand" }
-      - { title: "Asset Value",     col_type: Money,              description: "Total inventory asset value" }
-      - { title: "Calc. Avg",       col_type: Money,              description: "Calculated average cost per unit" }
-    filter_params: [item]
-    synonyms: ["inventory summary", "stock on hand", "inventory value", "item value"]
-
-  ItemSales:
-    description: "Sales quantity and revenue broken down by product/service item."
-    default_date_macro: "this month-to-date"
-    row_structure: grouped_by_item
-    columns:
-      - { title: "Product/Service", col_type: ProductsAndService, description: "Item name" }
-    filter_params: [date_macro, start_date, end_date, item, summarize_column_by]
-    synonyms: ["item sales", "product sales", "sales by item", "sales by product"]
-
-  ProfitAndLoss:
-    description: "Income and expense summary showing net profit or loss for a period."
-    default_date_macro: "this calendar year-to-date"
-    row_structure: sectioned
-    columns:
-      - { title: "Account", col_type: Account, description: "Income or expense account name" }
-      - { title: "Total",   col_type: Money,   description: "Net amount for the period" }
-    filter_params: [date_macro, start_date, end_date, accounting_method, summarize_column_by]
-    synonyms: ["p&l", "income statement", "profit and loss", "pnl", "net income", "revenue vs expenses"]
-
-  ProfitAndLossDetail:
-    description: "Transaction-level detail underlying the Profit & Loss report."
-    default_date_macro: "this calendar year-to-date"
-    row_structure: grouped_by_account
-    columns:
-      - { title: "Date",             col_type: Date,   description: "Transaction date" }
-      - title: "Transaction Type"
-        col_type: String
-        description: "Type of income or expense transaction"
-        enum:
-          - "Bill"
-          - "Cash Expense"
-          - "Check"
-          - "Credit Card Expense"
-          - "Credit Memo"
-          - "Expense"
-          - "Invoice"
-          - "Refund"
-          - "Sales Receipt"
-      - { title: "Num",              col_type: String, description: "Transaction number" }
-      - { title: "Name",             col_type: String, description: "Customer or vendor name" }
-      - { title: "Memo/Description", col_type: String, description: "Transaction memo" }
-      - { title: "Split",            col_type: String, description: "Offsetting account" }
-      - { title: "Amount",           col_type: Money,  description: "Transaction amount" }
-      - { title: "Balance",          col_type: Money,  description: "Running balance" }
-    filter_params: [date_macro, start_date, end_date, accounting_method, columns]
-    synonyms: ["p&l detail", "income statement detail", "pnl detail"]
-
-  TrialBalance:
-    description: "Debit and credit totals for all accounts to verify double-entry balance."
-    default_date_macro: "this month-to-date"
-    row_structure: flat
-    columns:
-      - { title: "Account", col_type: Account, description: "Account name" }
-      - { title: "Debit",   col_type: Money,   description: "Total debit balance" }
-      - { title: "Credit",  col_type: Money,   description: "Total credit balance" }
-    filter_params: [date_macro, start_date, end_date, accounting_method]
-    synonyms: ["trial balance", "tb", "debit credit summary"]
-
-  TransactionList:
-    description: "All transactions for a period across all types with account and amount."
-    default_date_macro: "this month-to-date"
-    row_structure: flat
-    columns:
-      - { title: "Date",             col_type: Date,   description: "Transaction date" }
-      - title: "Transaction Type"
-        col_type: String
-        description: "QuickBooks transaction type"
-        enum:
-          - "Bill"
-          - "Bill Payment (Check)"
-          - "Bill Payment (Credit Card)"
-          - "Billable Expense Charge"
-          - "Cash Expense"
-          - "Charge"
-          - "Check"
-          - "Credit Card Credit"
-          - "Credit Card Expense"
-          - "Credit Memo"
-          - "Deposit"
-          - "Estimate"
-          - "Expense"
-          - "Inventory Qty Adjust"
-          - "Invoice"
-          - "Journal Entry"
-          - "Payment"
-          - "Purchase Order"
-          - "Refund"
-          - "Sales Receipt"
-          - "Sales Tax Payment"
-          - "Time Charge"
-      - { title: "Num",              col_type: String,  description: "Transaction reference number" }
-      - title: "Posting"
-        col_type: String
-        description: "Whether the transaction posts to the general ledger"
-        enum: ["Yes", "No"]
-      - { title: "Name",             col_type: String,  description: "Customer, vendor, or employee" }
-      - { title: "Memo/Description", col_type: String,  description: "Transaction memo" }
-      - { title: "Account",          col_type: String,  description: "Primary account" }
-      - { title: "Split",            col_type: String,  description: "Offsetting account (or -Split- if multiple)" }
-      - { title: "Amount",           col_type: Money,   description: "Transaction amount" }
-    filter_params: [date_macro, start_date, end_date, transaction_type, customer, vendor, columns]
-    synonyms: ["transaction list", "all transactions", "transaction log", "journal"]
-
-  VendorBalance:
-    description: "Outstanding balance owed to each vendor."
-    default_date_macro: all
-    row_structure: flat
-    columns:
-      - { title: "Vendor", col_type: Vendor, description: "Vendor name" }
-      - { title: "Total",  col_type: Money,  description: "Outstanding balance owed" }
-    filter_params: [vendor]
-    synonyms: ["vendor balance", "what we owe", "ap by vendor", "outstanding bills by vendor"]
-
-  VendorBalanceDetail:
-    description: "Transaction-level open items per vendor with running balance."
-    default_date_macro: all
-    row_structure: grouped_by_vendor
-    columns:
-      - { title: "Date",         col_type: Date,  description: "Transaction date" }
-      - title: "Transaction Type"
-        col_type: String
-        description: "Type of vendor-facing transaction"
-        enum: ["Bill", "Bill Payment (Check)", "Bill Payment (Credit Card)", "Vendor Credit"]
-      - { title: "Num",          col_type: String, description: "Reference number" }
-      - { title: "Due Date",     col_type: Date,   description: "Payment due date" }
-      - { title: "Amount",       col_type: Money,  description: "Transaction amount" }
-      - { title: "Open Balance", col_type: Money,  description: "Unpaid balance" }
-      - { title: "Balance",      col_type: Money,  description: "Running balance" }
-    filter_params: [vendor]
-    synonyms: ["vendor balance detail", "ap detail by vendor", "bill aging detail"]
-
-  VendorExpenses:
-    description: "Total expenses grouped by vendor for a period."
-    default_date_macro: "this calendar year-to-date"
-    row_structure: flat
-    columns:
-      - { title: "Vendor", col_type: Vendor, description: "Vendor name" }
-      - { title: "Total",  col_type: Money,  description: "Total expenses paid to vendor" }
-    filter_params: [date_macro, start_date, end_date, vendor]
-    synonyms: ["vendor expenses", "expenses by vendor", "spending by vendor", "cost by vendor"]

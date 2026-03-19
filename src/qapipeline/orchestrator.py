@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import Any, Dict, List, Optional
 from .models import Plan , OrchestratorOutput
-from .settings import get_provider_runtime, ensure_env_loaded
+from .settings import ensure_env_loaded
 from .llm_common import LLMRouterBase, LLMJsonMixin
 import re
 import json
@@ -58,12 +58,13 @@ class _LLMRouter(LLMRouterBase):
             "- CRITICAL: Only use field names listed in the entity reference below. "
             "Check valid_values for categorical fields.\n"
             "- CRITICAL: Purchase (expense transactions, has PaymentType) and PurchaseOrder (purchase orders, has POStatus) are DIFFERENT entities.\n"
+            "- CRITICAL: Purchase (expense transactions, has PaymentType) and PurchaseOrder "
             "- No commentary, no code fences. Keys must be Q1..Qn only.\n"
             "\n"
             "\"filter\" field — WHERE clause applied on cached results after fetch:\n"
             "  Operators : =  !=  >  <  >=  <=  LIKE  BETWEEN … AND …  IS NULL  IS NOT NULL\n"
             "  Logical   : AND  OR  parentheses for grouping\n"
-            "  Field names: snake_case  e.g. total_amt, txn_date, vendor_ref_name, unit_price\n"
+            "  Field names: camelcase \n"
             "  Strings   : single-quoted   type = 'Service'\n"
             "  Numbers   : unquoted        unit_price > 9.99\n"
             "  Booleans  : unquoted        active = true\n"
@@ -102,6 +103,7 @@ class Orchestrator(LLMJsonMixin):
     """
     Orchestrator: generates QuickBooks IDS queries via LLM and executes them
     against the Spring Boot QuickBooks API.
+    Searches the FAISS vector DB for detailed entity/column info from semantics.
     Input: Plan
     Output: OrchestratorOutput with query results passed to compiler.
     """
@@ -116,23 +118,102 @@ class Orchestrator(LLMJsonMixin):
         ):
         ensure_env_loaded()
         self.debug = debug
-        runtime = get_provider_runtime("orchestrator")
-        self.provider = runtime.provider
-        self._openai = runtime.openai_client
-        self.openai_model = runtime.openai_model
-        self._ollama = runtime.ollama_client
-        self.ollama_model = runtime.ollama_model
-
         self.try_llm = try_llm
         self.faiss_dir = faiss_dir
         self.router = _LLMRouter() if try_llm else None
+        self._faiss_store = None
+
+    # ---------- Vector DB search for semantic details ----------
+    def _get_faiss_store(self):
+        """Lazily load the FAISS store once."""
+        if self._faiss_store is not None:
+            return self._faiss_store
+        if FaissVectorStoreCosine is None:
+            return None
+        try:
+            store = FaissVectorStoreCosine(persist_dir=self.faiss_dir)
+            store.load()
+            self._faiss_store = store
+            return store
+        except Exception:
+            return None
+
+    def _extract_entities_from_plan(self, ordered_steps: Dict[str, Any]) -> List[str]:
+        """Extract entity names from the Q-tree nodes (set by splitter)."""
+        entities: List[str] = []
+        seen = set()
+        def walk(node: Any) -> None:
+            if not isinstance(node, dict):
+                return
+            for ename in (node.get("entities") or []):
+                if ename not in seen:
+                    seen.add(ename)
+                    entities.append(ename)
+            for child in (node.get("children") or []):
+                if isinstance(child, dict):
+                    for _, cv in child.items():
+                        walk(cv)
+        for _, v in (ordered_steps or {}).items():
+            walk(v)
+        return entities
+
+    @staticmethod
+    def _get_entity_name_from_hit(md: Dict[str, Any]) -> str:
+        """Extract entity_name from FAISS hit metadata (may be in _raw after _map_meta)."""
+        ename = md.get("entity_name", "")
+        if not ename:
+            raw = md.get("_raw") or {}
+            ename = raw.get("entity_name", "")
+        return ename
+
+    def _search_semantics(self, entity_names: List[str], user_query: str = "") -> str:
+        """
+        Search the FAISS vector DB for detailed entity info (fields, types, valid_values).
+        Returns a text reference that the LLM can use to build correct queries.
+        """
+        store = self._get_faiss_store()
+        if store is None:
+            return ""
+
+        entity_texts: Dict[str, str] = {}
+
+        # Search by entity name for each entity from the plan
+        for ename in entity_names:
+            hits = store.query(f"Entity: {ename}", k=3) or []
+            for h in hits:
+                md = h.get("metadata") or {}
+                hit_entity = self._get_entity_name_from_hit(md)
+                if hit_entity == ename:
+                    # Found exact entity match — use its page_content
+                    text = md.get("text", "")
+                    if text and ename not in entity_texts:
+                        entity_texts[ename] = text
+                    break
+
+        # Also search by user query to catch entities not explicitly named
+        if user_query:
+            hits = store.query(user_query, k=5) or []
+            for h in hits:
+                md = h.get("metadata") or {}
+                hit_entity = self._get_entity_name_from_hit(md)
+                if hit_entity and not hit_entity.startswith("_") and hit_entity not in entity_texts:
+                    text = md.get("text", "")
+                    if text:
+                        entity_texts[hit_entity] = text
+
+        if not entity_texts:
+            return ""
+
+        lines: List[str] = ["Entity Reference (from semantic database):"]
+        for ename, text in entity_texts.items():
+            lines.append(f"\n{text}")
+        return "\n".join(lines)
 
     def run(self, plan: Plan, memory_text: str = "") -> OrchestratorOutput:
-        provider = self.provider
-        self.provider = provider
         answers: List[str] = []
         self.question = json.dumps(plan.ordered_steps, indent=2)
         self.metadata = plan.metadata
+        self.ordered_steps = plan.ordered_steps
         print(self.question )  # plain JSON without dict_values
         max_attempts = 3
         generated_queries: Optional[Dict[str, Any]] = None
@@ -169,14 +250,6 @@ class Orchestrator(LLMJsonMixin):
             entities = self.metadata.get("entities")
             if isinstance(entities, dict):
                 return ", ".join(sorted(entities.keys()))
-            fields = self.metadata.get("fields")
-            if isinstance(fields, dict):
-                entity_set = set()
-                for v in fields.values():
-                    if isinstance(v, str) and "." in v:
-                        entity_set.add(v.split(".")[0])
-                if entity_set:
-                    return ", ".join(sorted(entity_set))
         return (
             "Account, Bill, BillPayment, CreditMemo, Customer, Deposit, "
             "Employee, Estimate, Invoice, Item, JournalEntry, Payment, "
@@ -184,44 +257,45 @@ class Orchestrator(LLMJsonMixin):
             "SalesReceipt, TaxAgency, TaxCode, TaxRate, Term, TimeActivity, Vendor"
         )
 
-    def _build_entity_reference(self) -> str:
-        """Build a concise entity→fields→valid_values reference for the LLM prompt."""
+    def _attempt_llm(self, user_query: str, memory_text: str = "") -> Optional[Dict[str, Any]]:
+        if not (self.try_llm and self.router and self.router.provider):
+            return None
+
+        entity_list = self._get_entity_list()
+
+        # Extract entity names from the plan's Q-tree
+        plan_entities = self._extract_entities_from_plan(self.ordered_steps) if hasattr(self, 'ordered_steps') and self.ordered_steps else []
+
+        # Search FAISS vector DB for detailed entity info (fields, types, valid_values)
+        semantic_ref = self._search_semantics(plan_entities, user_query=user_query)
+
+        # Use semantic reference from vector DB as metadata for the prompt
+        if semantic_ref:
+            meta_text = semantic_ref
+        else:
+            # Fallback: use table metadata entities as basic reference
+            meta_text = self._build_table_metadata_reference()
+
+        prompt = _LLMRouter._prompt_header(entity_list=entity_list) + "\n" + _LLMRouter._prompt_body(user_query, meta_text, memory_text=memory_text)
+        return self.router.ask_json(prompt)
+
+    def _build_table_metadata_reference(self) -> str:
+        """Fallback: build entity reference from table metadata when vector DB is unavailable."""
         if not isinstance(self.metadata, dict):
             return ""
         entities = self.metadata.get("entities")
         if not isinstance(entities, dict):
-            return ""
+            return json.dumps(self.metadata, default=str)
         lines: List[str] = []
         for name in sorted(entities.keys()):
             info = entities[name]
             if not isinstance(info, dict):
                 continue
-            fields = info.get("fields", {})
-            types = info.get("types", {})
-            valid = info.get("valid_values", {})
-            # Build field list: show IDS field name and type
-            field_parts: List[str] = []
-            for _alias, ids_field in fields.items():
-                ftype = types.get(ids_field, "")
-                ftype_str = f" ({ftype})" if ftype else ""
-                field_parts.append(f"{ids_field}{ftype_str}")
-            lines.append(f"{name}: {', '.join(field_parts)}")
-            # Show valid values for categorical fields
-            for field_name, values in valid.items():
-                if isinstance(values, list):
-                    lines.append(f"  {field_name} valid values: {values}")
+            desc = info.get("description", "")
+            key_cols = info.get("key_columns", [])
+            cols_str = ", ".join(key_cols) if key_cols else ""
+            lines.append(f"{name}: {desc} | Columns: {cols_str}")
         return "\n".join(lines)
-
-    def _attempt_llm(self, user_query: str, memory_text: str = "") -> Optional[Dict[str, Any]]:
-        if not (self.try_llm and self.router and self.router.provider):
-            return None
-        entity_list = self._get_entity_list()
-        entity_ref = self._build_entity_reference()
-        meta_text = entity_ref if entity_ref else (
-            self.metadata if isinstance(self.metadata, str) else json.dumps(self.metadata, default=str)
-        )
-        prompt = _LLMRouter._prompt_header(entity_list=entity_list) + "\n" + _LLMRouter._prompt_body(user_query, meta_text, memory_text=memory_text)
-        return self.router.ask_json(prompt)
 
     def _extract_query_list(self, tree: Dict[str, Any]) -> List[Dict[str, str]]:
         """Walk the Q-tree and extract each node as {"text": <IDS query>, "filter": <WHERE clause>}.
