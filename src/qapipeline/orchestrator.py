@@ -34,54 +34,78 @@ class _LLMRouter(LLMRouterBase):
     @staticmethod
     def _prompt_header(entity_list: str = "") -> str:
         return (
-            "You are a query planner for QuickBooks Online IDS Query API.\n"
+            "You are a query planner for QuickBooks Online.\n"
             "Output ONLY raw JSON (no backticks, no prose) shaped like:\n"
             "{\n"
-            "  \"Q1\": {\"text\": \"select * from Invoice\", \"filter\": \"balance > 0 AND txn_status = 'Open'\", \"children\": [\n"
+            "  \"Q1\": {\"text\": \"select * from Invoice\", \"filter\": \"balance > 0\", \"children\": [\n"
             "    {\"Q2\": {\"text\": \"select * from Customer\", \"filter\": \"\", \"children\": []}}\n"
             "  ]},\n"
             "  \"Q3\": {\"text\": \"select * from Bill\", \"filter\": \"total_amt > 500\", \"children\": []}\n"
             "}\n"
+            "\n"
+            "━━━ SECTION 1 — IDS TRANSACTION QUERIES ━━━\n"
+            "Use for fetching individual records (invoices, customers, items, etc.).\n"
+            f"Available entities: {entity_list}\n"
             "Rules:\n"
-            "- Each node has exactly two fields: \"text\" and \"filter\".\n"
-            "- CRITICAL: \"text\" must ONLY be: select * from <EntityName>  — nothing else.\n"
-            "  Do NOT add WHERE, ORDERBY, STARTPOSITION, MAXRESULTS or any other clause to \"text\".\n"
-            "  Correct:   \"text\": \"select * from Invoice\"\n"
-            "  WRONG:     \"text\": \"select * from Invoice where Balance > '0'\"\n"
-            "  WRONG:     \"text\": \"select * from Invoice ORDERBY TxnDate DESC MAXRESULTS 10\"\n"
-            "- All filtering and sorting logic goes into the \"filter\" field, NOT into \"text\".\n"
-            f"- Available entities: {entity_list}\n"
-            "- Keep steps minimal and nest dependents as children.\n"
-            "- No $match, $group, $sort or MongoDB syntax.\n"
+            "- \"text\" MUST be: select * from <EntityName>  — nothing else.\n"
+            "  WRONG: select * from Invoice where Balance > 0\n"
+            "  WRONG: select * from Invoice ORDERBY TxnDate DESC\n"
+            "- All filtering logic goes into \"filter\" (SQL WHERE syntax, see below).\n"
             "- IDS does NOT support JOIN, GROUP BY, SUM, COUNT, AVG or subqueries.\n"
-            "- To aggregate, fetch raw data and let the downstream compiler handle it.\n"
-            "- CRITICAL: Only use field names listed in the entity reference below. "
-            "Check valid_values for categorical fields.\n"
-            "- CRITICAL: Purchase (expense transactions, has PaymentType) and PurchaseOrder (purchase orders, has POStatus) are DIFFERENT entities.\n"
-            "- CRITICAL: Purchase (expense transactions, has PaymentType) and PurchaseOrder "
-            "- No commentary, no code fences. Keys must be Q1..Qn only.\n"
+            "- To aggregate, fetch raw data; the downstream compiler handles totals.\n"
+            "- CRITICAL: Purchase (expense, has PaymentType) ≠ PurchaseOrder (has POStatus).\n"
+            "- Use only field names from the entity reference. Check valid_values.\n"
             "\n"
-            "\"filter\" field — WHERE clause applied on cached results after fetch:\n"
-            "  Operators : =  !=  >  <  >=  <=  LIKE  BETWEEN … AND …  IS NULL  IS NOT NULL\n"
-            "  Logical   : AND  OR  parentheses for grouping\n"
-            "  Field names: camelcase \n"
-            "  Strings   : single-quoted   type = 'Service'\n"
-            "  Numbers   : unquoted        unit_price > 9.99\n"
-            "  Booleans  : unquoted        active = true\n"
-            "  Blank     : \"filter\": \"\"   (no filtering — return all fetched records)\n"
-            "\n"
+            "\"filter\" — SQL WHERE clause on cached results (blank = no filter):\n"
+            "  Operators: =  !=  >  <  >=  <=  LIKE  BETWEEN … AND …  IS NULL  IS NOT NULL\n"
+            "  Logic:     AND  OR  ( )\n"
             "  Examples:\n"
-            "    \"filter\": \"\"                                           → all records\n"
-            "    \"filter\": \"type = 'Service'\"                          → equality\n"
-            "    \"filter\": \"unit_price > 9.99\"                         → numeric\n"
-            "    \"filter\": \"total_amt BETWEEN 100 AND 500\"             → range\n"
-            "    \"filter\": \"display_name LIKE '%tech%'\"                → partial match\n"
-            "    \"filter\": \"txn_date >= '2025-01-01' AND txn_date <= '2025-12-31'\"  → date range\n"
-            "    \"filter\": \"type = 'Service' AND active = true AND unit_price > 5\"  → multi-condition\n"
-            "    \"filter\": \"(type = 'Service' OR type = 'Inventory') AND unit_price > 5\"  → grouped\n"
-            "    \"filter\": \"vendor_ref_name IS NOT NULL\"               → null check\n"
-            "  Resolve natural language via Metadata.synonyms when mapping to fields.\n"
-            "  CRITICAL: Fields with valid_values must use only defined values.\n"
+            "    \"filter\": \"total_amt BETWEEN 100 AND 500\"\n"
+            "    \"filter\": \"txn_date >= '2025-10-01' AND txn_date <= '2025-12-31'\"\n"
+            "    \"filter\": \"type = 'Service' AND active = true\"\n"
+            "\n"
+            "━━━ SECTION 2 — FINANCIAL REPORTS ━━━\n"
+            "Use for summary/aggregate financial data (P&L, Balance Sheet, Cash Flow, Aging, etc.).\n"
+            "For reports, set \"text\" to  report:<ReportName>  and \"filter\" to URL query params.\n"
+            "\n"
+            "Supported report names:\n"
+            "  ProfitAndLoss      — Income, expenses, net profit (use for P&L, income statement)\n"
+            "  BalanceSheet       — Assets, liabilities, equity snapshot\n"
+            "  CashFlow           — Operating/investing/financing cash flows\n"
+            "  AgedReceivables    — Outstanding customer invoices by age bucket\n"
+            "  AgedPayables       — Outstanding vendor bills by age bucket\n"
+            "  TransactionList    — List of all transactions in a date range\n"
+            "  CustomerBalance    — Balance owed by each customer\n"
+            "  VendorBalance      — Balance owed to each vendor\n"
+            "  GeneralLedger      — Full general ledger detail\n"
+            "  TrialBalance       — Trial balance of all accounts\n"
+            "\n"
+            "\"filter\" for reports — space-separated key=value pairs (use _ for spaces in values):\n"
+            "  date_macro   : Last_Month  Last_Fiscal_Quarter  Last_Fiscal_Year\n"
+            "                 This_Month  This_Fiscal_Year  Last_Fiscal_Year\n"
+            "                 This_Week   Last_Week  Today\n"
+            "  start_date   : YYYY-MM-DD  (use instead of date_macro for custom ranges)\n"
+            "  end_date     : YYYY-MM-DD\n"
+            "  accounting_method : Accrual  Cash\n"
+            "  Always supply a date filter. Default: date_macro=Last_Fiscal_Quarter\n"
+            "\n"
+            "Report examples:\n"
+            "  P&L last quarter:    {\"text\": \"report:ProfitAndLoss\", \"filter\": \"date_macro=Last_Fiscal_Quarter\", \"children\": []}\n"
+            "  P&L last year:       {\"text\": \"report:ProfitAndLoss\", \"filter\": \"date_macro=Last_Fiscal_Year\",    \"children\": []}\n"
+            "  Balance Sheet now:   {\"text\": \"report:BalanceSheet\",   \"filter\": \"date_macro=Today\",             \"children\": []}\n"
+            "  A/R aging:           {\"text\": \"report:AgedReceivables\",\"filter\": \"date_macro=Today\",             \"children\": []}\n"
+            "  Cash basis P&L YTD:  {\"text\": \"report:ProfitAndLoss\", \"filter\": \"date_macro=This_Fiscal_Year accounting_method=Cash\", \"children\": []}\n"
+            "  Custom date range:   {\"text\": \"report:ProfitAndLoss\", \"filter\": \"start_date=2025-10-01 end_date=2025-12-31\", \"children\": []}\n"
+            "\n"
+            "━━━ DECISION RULE ━━━\n"
+            "- P&L / income statement / profit / loss / revenue summary → report:ProfitAndLoss\n"
+            "- Balance sheet / net worth / assets & liabilities          → report:BalanceSheet\n"
+            "- Cash flow statement                                        → report:CashFlow\n"
+            "- Outstanding invoices / A/R aging                          → report:AgedReceivables\n"
+            "- Outstanding bills / A/P aging                             → report:AgedPayables\n"
+            "- Individual transaction details (invoice, customer, item)  → IDS select * from\n"
+            "\n"
+            "No commentary, no code fences. Keys must be Q1..Qn only.\n"
         )
 
     @staticmethod
@@ -114,6 +138,7 @@ class Orchestrator(LLMJsonMixin):
             faiss_dir: str = "faiss_store",
             question: str = "",
             metadata: Dict[str, Any]={},
+            jwt_token: Optional[str] = None,
             **kwargs,
         ):
         ensure_env_loaded()
@@ -122,6 +147,8 @@ class Orchestrator(LLMJsonMixin):
         self.faiss_dir = faiss_dir
         self.router = _LLMRouter() if try_llm else None
         self._faiss_store = None
+        # JWT forwarded from the frontend request; takes precedence over QB_JWT_TOKEN env var
+        self._jwt_token = jwt_token
 
     # ---------- Vector DB search for semantic details ----------
     def _get_faiss_store(self):
@@ -298,29 +325,123 @@ class Orchestrator(LLMJsonMixin):
         return "\n".join(lines)
 
     def _extract_query_list(self, tree: Dict[str, Any]) -> List[Dict[str, str]]:
-        """Walk the Q-tree and extract each node as {"text": <IDS query>, "filter": <WHERE clause>}.
-        'filter' is the optional cache WHERE clause sent alongside the IDS query to /api/query.
+        """Walk the Q-tree and extract each node.
+
+        Each returned dict has:
+          type   : "query" (IDS select) or "report" (QB Reports API)
+          text   : IDS query string  — only present for type=query
+          report : report name       — only present for type=report
+          filter : WHERE clause (query) or space-separated key=value params (report)
         """
         nodes: List[Dict[str, str]] = []
+
         def walk(node: Any) -> None:
             if not isinstance(node, dict):
                 return
-            text = node.get("text")
-            if isinstance(text, str) and text.strip():
+            text = node.get("text", "").strip()
+            filt = node.get("filter", "") or ""
+            if text.lower().startswith("report:"):
+                report_name = text.split(":", 1)[1].strip()
+                if report_name:
+                    nodes.append({"type": "report", "report": report_name, "filter": filt})
+            elif text:
                 nodes.append({
-                    "text": _normalize_ids_query(text),   # always "select * from <Entity>"
-                    "filter": node.get("filter", "") or "",
+                    "type": "query",
+                    "text": _normalize_ids_query(text),
+                    "filter": filt,
                 })
             for child in node.get("children") or []:
                 if isinstance(child, dict):
                     for _, cv in child.items():
                         walk(cv)
+
         for _, v in sorted(
             (tree or {}).items(),
             key=lambda kv: int(kv[0][1:]) if isinstance(kv[0], str) and kv[0].startswith("Q") and kv[0][1:].isdigit() else 0
         ):
             walk(v)
         return nodes
+
+    @staticmethod
+    def _extract_report_data(raw_json: str) -> str:
+        """
+        Flatten a QB Reports API response into a readable text summary.
+        QB returns: {"Header": {...}, "Columns": {...}, "Rows": {"Row": [...]}}
+        Produces human-readable lines the LLM compiler can reason over.
+        """
+        try:
+            parsed = json.loads(raw_json)
+        except (json.JSONDecodeError, TypeError):
+            return raw_json
+
+        # Unwrap {"data": ...} wrapper if present
+        if isinstance(parsed, dict) and "data" in parsed:
+            inner = parsed["data"]
+            if isinstance(inner, str):
+                try:
+                    parsed = json.loads(inner)
+                except (json.JSONDecodeError, TypeError):
+                    pass
+            elif isinstance(inner, dict):
+                parsed = inner
+
+        header = parsed.get("Header", {})
+        report_name = header.get("ReportName", "Report")
+        start_period = header.get("StartPeriod", "")
+        end_period = header.get("EndPeriod", "")
+        basis = header.get("ReportBasis", "")
+        currency = header.get("Currency", "")
+
+        lines: List[str] = [
+            f"=== {report_name} ===",
+            f"Period: {start_period} to {end_period}" if start_period else "",
+            f"Basis: {basis}  Currency: {currency}" if basis else "",
+            "",
+        ]
+        lines = [l for l in lines if l is not None]
+
+        def flatten_rows(rows_node: Any, indent: int = 0) -> None:
+            if not isinstance(rows_node, dict):
+                return
+            row_list = rows_node.get("Row", [])
+            if not isinstance(row_list, list):
+                row_list = [row_list]
+            pad = "  " * indent
+            for row in row_list:
+                if not isinstance(row, dict):
+                    continue
+                row_type = row.get("type", "")
+                # Section header
+                hdr = row.get("Header")
+                if isinstance(hdr, dict):
+                    col_data = hdr.get("ColData", [])
+                    label = col_data[0].get("value", "") if col_data else ""
+                    if label:
+                        lines.append(f"{pad}--- {label} ---")
+                # Detail rows
+                col_data = row.get("ColData")
+                if isinstance(col_data, list) and len(col_data) >= 2:
+                    label = col_data[0].get("value", "").strip()
+                    value = col_data[1].get("value", "").strip() if len(col_data) > 1 else ""
+                    if label and value:
+                        lines.append(f"{pad}{label}: {value}")
+                # Nested rows
+                nested = row.get("Rows")
+                if isinstance(nested, dict):
+                    flatten_rows(nested, indent + 1)
+                # Summary line
+                summ = row.get("Summary")
+                if isinstance(summ, dict):
+                    col_data = summ.get("ColData", [])
+                    label = col_data[0].get("value", "").strip() if col_data else ""
+                    value = col_data[1].get("value", "").strip() if len(col_data) > 1 else ""
+                    if label and value:
+                        lines.append(f"{pad}>>> {label}: {value}")
+                    lines.append("")
+
+        rows_node = parsed.get("Rows", {})
+        flatten_rows(rows_node)
+        return "\n".join(lines)
 
     @staticmethod
     def _extract_entity_data(raw_json: str) -> str:
@@ -368,13 +489,22 @@ class Orchestrator(LLMJsonMixin):
             return []
 
         base_url = os.getenv("QB_API_URL", "http://localhost:8080")
-        jwt_token = os.getenv("QB_JWT_TOKEN", "")
-        if not jwt_token:
-            return ["ERROR: QB_JWT_TOKEN environment variable is not set. Please authenticate via OAuth flow first."]
+
+        # Resolve JWT: prefer the token forwarded from the frontend request,
+        # fall back to the static env-var token (for CLI / dev use).
+        auth_header: str = ""
+        if self._jwt_token:
+            # Already in "Bearer <token>" format from the HTTP Authorization header
+            auth_header = self._jwt_token if self._jwt_token.startswith("Bearer ") else f"Bearer {self._jwt_token}"
+        else:
+            env_token = os.getenv("QB_JWT_TOKEN", "")
+            if not env_token:
+                return ["ERROR: No JWT token available. Log in via the frontend or set QB_JWT_TOKEN env var."]
+            auth_header = f"Bearer {env_token}"
 
         url = f"{base_url.rstrip('/')}/api/query"
         headers = {
-            "Authorization": f"Bearer {jwt_token}",
+            "Authorization": auth_header,
             "Content-Type": "application/json",
             "Accept": "application/json",
         }
@@ -385,30 +515,61 @@ class Orchestrator(LLMJsonMixin):
 
         try:
             for node in queries:
-                query_text = node["text"]
-                where_filter = node.get("filter", "")
-                # Build request body: always send query, add filter only when non-empty
-                payload: Dict[str, str] = {"query": query_text}
-                if where_filter:
-                    payload["filter"] = where_filter
-                try:
-                    resp = session.post(url, json=payload, timeout=30)
-                    resp.raise_for_status()
-                    entity_data = self._extract_entity_data(resp.text)
-                    results.append(entity_data)
-                except requests.exceptions.HTTPError as e:
-                    error_body = ""
+                node_type = node.get("type", "query")
+
+                if node_type == "report":
+                    # ── QB Reports API: GET /api/reports/{reportName}?key=value&... ──
+                    report_name = node["report"]
+                    filter_str  = node.get("filter", "") or ""
+                    # Parse "key=value key2=value2" — replace _ in values with space
+                    params: Dict[str, str] = {}
+                    for part in filter_str.split():
+                        if "=" in part:
+                            k, v = part.split("=", 1)
+                            params[k] = v.replace("_", " ")
+                    report_url = f"{base_url.rstrip('/')}/api/reports/{report_name}"
                     try:
-                        error_body = e.response.text[:500]
-                    except Exception:
-                        pass
-                    results.append(f"ERROR: HTTP {e.response.status_code} - {error_body}\nQUERY: {query_text[:500]}")
-                except requests.exceptions.ConnectionError as e:
-                    results.append(f"ERROR: Connection failed to {url} - {e}\nQUERY: {query_text[:500]}")
-                except requests.exceptions.Timeout:
-                    results.append(f"ERROR: Request timed out\nQUERY: {query_text[:500]}")
-                except Exception as e:
-                    results.append(f"ERROR: {e}\nQUERY: {query_text[:500]}")
+                        resp = session.get(report_url, params=params, timeout=30)
+                        resp.raise_for_status()
+                        results.append(self._extract_report_data(resp.text))
+                    except requests.exceptions.HTTPError as e:
+                        error_body = ""
+                        try:
+                            error_body = e.response.text[:500]
+                        except Exception:
+                            pass
+                        results.append(f"ERROR: HTTP {e.response.status_code} - {error_body}\nREPORT: {report_name}")
+                    except requests.exceptions.ConnectionError as e:
+                        results.append(f"ERROR: Connection failed to {report_url} - {e}\nREPORT: {report_name}")
+                    except requests.exceptions.Timeout:
+                        results.append(f"ERROR: Request timed out\nREPORT: {report_name}")
+                    except Exception as e:
+                        results.append(f"ERROR: {e}\nREPORT: {report_name}")
+
+                else:
+                    # ── IDS Query API: POST /api/query ──
+                    query_text   = node["text"]
+                    where_filter = node.get("filter", "")
+                    payload: Dict[str, str] = {"query": query_text}
+                    if where_filter:
+                        payload["filter"] = where_filter
+                    try:
+                        resp = session.post(url, json=payload, timeout=30)
+                        resp.raise_for_status()
+                        results.append(self._extract_entity_data(resp.text))
+                    except requests.exceptions.HTTPError as e:
+                        error_body = ""
+                        try:
+                            error_body = e.response.text[:500]
+                        except Exception:
+                            pass
+                        results.append(f"ERROR: HTTP {e.response.status_code} - {error_body}\nQUERY: {query_text[:500]}")
+                    except requests.exceptions.ConnectionError as e:
+                        results.append(f"ERROR: Connection failed to {url} - {e}\nQUERY: {query_text[:500]}")
+                    except requests.exceptions.Timeout:
+                        results.append(f"ERROR: Request timed out\nQUERY: {query_text[:500]}")
+                    except Exception as e:
+                        results.append(f"ERROR: {e}\nQUERY: {query_text[:500]}")
         finally:
             session.close()
 

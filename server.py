@@ -3,7 +3,7 @@ import os, sys
 from pathlib import Path
 import json
 from typing import Any, Dict, List, Optional
-from fastapi import FastAPI
+from fastapi import FastAPI, Header
 from pydantic import BaseModel
 from collections import deque
 from typing import Deque, Tuple
@@ -43,7 +43,7 @@ app.add_middleware(
 class ChatRequest(BaseModel):
     message: str
     try_llm: bool = True  # splitter may ignore if no LLM configured
-    session_id: str = "default"  # NEW
+    session_id: str = "default"
 
 
 class ChatResponse(BaseModel):
@@ -124,7 +124,10 @@ def health():
     }
 
 @app.post("/chat", response_model=ChatResponse)
-def chat(req: ChatRequest) -> ChatResponse:
+def chat(
+    req: ChatRequest,
+    authorization: Optional[str] = Header(default=None),
+) -> ChatResponse:
     sid = req.session_id
     history = SESSIONS.setdefault(sid, deque(maxlen=10))
     history.append(("user", req.message))
@@ -140,13 +143,14 @@ def chat(req: ChatRequest) -> ChatResponse:
 
     # 1. Split question
     splitter = QuestionSplitter(try_llm=req.try_llm)
-    plan = splitter.plan(req.message, memory_text=memory_ctx)  # NEW: pass memory
+    plan = splitter.plan(req.message, memory_text=memory_ctx)
     plan_steps = _flatten_plan_steps(plan.ordered_steps)
     trace: List[str] = [f"[SPLITTER] steps={len(plan_steps)}"]
 
-    # 2. Orchestrate (dummy executes each step)
-    orch = Orchestrator(debug=True)
-    answers = orch.run(plan, memory_text=memory_ctx)  # NEW: pass memory
+    # 2. Orchestrate — forward the JWT from the frontend so Spring Boot is called
+    #    with the user's own token instead of the static env-var token.
+    orch = Orchestrator(debug=True, jwt_token=authorization)
+    answers = orch.run(plan, memory_text=memory_ctx)
     trace.append(f"[ORCH] produced {len(answers.query_result)} interim answers")
 
     # 3. Compile

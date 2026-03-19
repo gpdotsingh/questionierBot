@@ -6,6 +6,56 @@ dataset:
   source_endpoint: "/api/query"   # QuickBooks IDS Query API endpoint
 
 # ──────────────────────────────────────────────
+# Financial Reports (QB Reports API)
+# Use "report:<ReportName>" in the orchestrator text field.
+# Do NOT use select * from for these — they are summary reports, not entity queries.
+# ──────────────────────────────────────────────
+reports:
+  ProfitAndLoss:
+    description: "Profit & Loss (income statement). Shows total income, expenses, and net profit/loss for a period."
+    synonyms: [P&L, income statement, profit and loss, net income, revenue summary, earnings]
+    params:
+      date_macro: "Last_Quarter (default). Options: Last_Month, Last_Quarter, Last_Year, This_Month, This_Year, This_Fiscal_Year, Last_Fiscal_Year"
+      start_date: "YYYY-MM-DD (alternative to date_macro)"
+      end_date: "YYYY-MM-DD"
+      accounting_method: "Accrual (default) or Cash"
+  BalanceSheet:
+    description: "Balance sheet snapshot. Shows assets, liabilities, and equity at a point in time."
+    synonyms: [balance sheet, net worth, assets liabilities equity, financial position]
+    params:
+      date_macro: "Today (default). Options same as ProfitAndLoss."
+  CashFlow:
+    description: "Cash flow statement. Shows operating, investing, and financing cash flows."
+    synonyms: [cash flow, cash statement, cash movement]
+    params:
+      date_macro: "Last_Quarter (default)"
+  AgedReceivables:
+    description: "Accounts receivable aging. Shows outstanding customer invoices grouped by days overdue."
+    synonyms: [A/R aging, accounts receivable, outstanding invoices, overdue invoices, aged receivables]
+    params:
+      date_macro: "Today (default)"
+  AgedPayables:
+    description: "Accounts payable aging. Shows outstanding vendor bills grouped by days overdue."
+    synonyms: [A/P aging, accounts payable, outstanding bills, overdue bills, aged payables]
+    params:
+      date_macro: "Today (default)"
+  CustomerBalance:
+    description: "Total balance owed by each customer."
+    synonyms: [customer balances, customer summary, what customers owe]
+  VendorBalance:
+    description: "Total balance owed to each vendor."
+    synonyms: [vendor balances, vendor summary, what we owe vendors]
+  GeneralLedger:
+    description: "Full general ledger with all account transactions."
+    synonyms: [general ledger, GL, ledger detail]
+  TrialBalance:
+    description: "Trial balance of all chart-of-accounts entries."
+    synonyms: [trial balance]
+  TransactionList:
+    description: "List of all transactions in a date range across all types."
+    synonyms: [transaction list, all transactions, full transaction history]
+
+# ──────────────────────────────────────────────
 # Entity: Account (Chart of Accounts)
 # ──────────────────────────────────────────────
 entities:
