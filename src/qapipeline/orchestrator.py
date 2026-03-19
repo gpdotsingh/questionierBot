@@ -149,6 +149,8 @@ class Orchestrator(LLMJsonMixin):
         self._faiss_store = None
         # JWT forwarded from the frontend request; takes precedence over QB_JWT_TOKEN env var
         self._jwt_token = jwt_token
+        # Set to the new JWT after a successful token refresh (propagated back to the frontend)
+        self.refreshed_jwt: Optional[str] = None
 
     # ---------- Vector DB search for semantic details ----------
     def _get_faiss_store(self):
@@ -513,6 +515,18 @@ class Orchestrator(LLMJsonMixin):
         session = requests.Session()
         session.headers.update(headers)
 
+        def _capture_refreshed_jwt(resp: requests.Response) -> None:
+            """
+            Spring Boot sets X-Refreshed-JWT when it silently refreshed the QB
+            access token on our behalf. Capture it so we can propagate it back to
+            the frontend, and update the session so remaining queries in this run
+            also use the new token.
+            """
+            new_jwt = resp.headers.get("X-Refreshed-JWT")
+            if new_jwt:
+                self.refreshed_jwt = new_jwt
+                session.headers.update({"Authorization": f"Bearer {new_jwt}"})
+
         try:
             for node in queries:
                 node_type = node.get("type", "query")
@@ -530,6 +544,7 @@ class Orchestrator(LLMJsonMixin):
                     report_url = f"{base_url.rstrip('/')}/api/reports/{report_name}"
                     try:
                         resp = session.get(report_url, params=params, timeout=30)
+                        _capture_refreshed_jwt(resp)
                         resp.raise_for_status()
                         results.append(self._extract_report_data(resp.text))
                     except requests.exceptions.HTTPError as e:
@@ -555,6 +570,7 @@ class Orchestrator(LLMJsonMixin):
                         payload["filter"] = where_filter
                     try:
                         resp = session.post(url, json=payload, timeout=30)
+                        _capture_refreshed_jwt(resp)
                         resp.raise_for_status()
                         results.append(self._extract_entity_data(resp.text))
                     except requests.exceptions.HTTPError as e:

@@ -52,6 +52,9 @@ class ChatResponse(BaseModel):
     validation_score: Optional[float] = None
     chain_trace: List[str]
     validated_response: Optional[Dict[str, Any]] = None
+    # Set when the QB access token was silently refreshed mid-request.
+    # The frontend should store this as the new JWT for subsequent calls.
+    refreshed_jwt: Optional[str] = None
 
 
 def _sort_key(key: str) -> int:
@@ -182,4 +185,5 @@ def chat(
         validation_score=verdict.score,
         chain_trace=trace,
         validated_response=truncated_response,
+        refreshed_jwt=orch.refreshed_jwt,
     )

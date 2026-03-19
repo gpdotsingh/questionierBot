@@ -72,3 +72,6 @@ docker
 docker build -t questionier-bot .
 
 docker run --rm -p 8000:8000 --env-file .env -v "$(pwd)/data:/app/data" -v "$(pwd)/faiss_store:/app/faiss_store" questionier-bot
+
+
+uv run uvicorn server:app --reload
