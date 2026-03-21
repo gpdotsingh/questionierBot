@@ -14,4 +14,3 @@ env/
 *.sqlite3
 *.db
 *.ipynb_checkpoints/
-faiss_store/

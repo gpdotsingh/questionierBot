@@ -19,12 +19,14 @@ class _LLMRouter(LLMRouterBase):
         oq = (output.original_question or "").strip()
         
         return (
-            "You are a report compiler. Write a clear, concise,  to the OriginalQuestion.\n"
-            "Use Metadata to correctly name entities/fields and QueryResults as the factual basis.\n"
+            "You are a financial report compiler. Answer the OriginalQuestion directly and completely.\n"
+            "Use the QueryResults as your only factual source. Never ask the user to re-run a query.\n"
             "Requirements:\n"
-            "- Be accurate and brief (3–8 sentences or short bullet points).\n"
-            "- Include key numbers, top entries (limit 3–5), and relevant filters (city/state/date ranges).\n"
-            "- If results are empty or contain errors, state that and suggest a correction.\n"
+            "- Always give a definitive answer using whatever data IS available.\n"
+            "- If the requested period has no data, state that clearly AND report the most recent\n"
+            "  period that does have data (from the other QueryResults provided).\n"
+            "- Include key numbers, top entries (limit 3–5), and relevant date ranges.\n"
+            "- Never say 'I can't determine' if any QueryResult contains relevant figures.\n"
             "- Plain text only. No code fences, no SQL, no JSON.\n\n"
             f"OriginalQuestion:\n{oq}\n\n"
             "Now write the final answer.\n"
@@ -71,6 +73,33 @@ class LLMCompiler:
                 lines.append(f"- {k}: {vv}")
         return "\n".join(lines)
 
+    # Fields that are structural noise in flat QB cache records:
+    # internal keys, billing/shipping addresses, audit metadata, QB flags.
+    # These push business-critical fields (due_date, balance, customer_ref_name)
+    # past the per-record character budget, causing them to be truncated away.
+    _NOISE_PREFIXES = (
+        "_",                          # _raw_json, _company_id
+        "allow_",                     # allow_ipn_payment, allow_online_*
+        "bill_addr_",                 # billing address breakdown
+        "ship_addr_",                 # shipping address breakdown
+        "meta_data_",                 # create_time, last_updated_time, etc.
+        "delivery_info_",
+        "txn_tax_detail_txn_tax_code_ref_",
+    )
+    _NOISE_EXACT = frozenset({
+        "sync_token", "domain", "sparse", "free_form_address",
+        "currency_ref_value", "currency_ref_name",
+    })
+
+    @classmethod
+    def _slim_record(cls, rec: dict) -> dict:
+        """Strip noise fields so business-critical fields fit within the char budget."""
+        return {
+            k: v for k, v in rec.items()
+            if k not in cls._NOISE_EXACT
+            and not any(k.startswith(p) for p in cls._NOISE_PREFIXES)
+        }
+
     def _results_to_text(self, qr: Dict[str, Any]) -> str:
         if not qr:
             return "(none)"
@@ -87,15 +116,19 @@ class LLMCompiler:
         out = []
         for i, item in enumerate(vals, 1):
             # Each item in query_result is a JSON array string (all records for one entity).
-            # Parse it so every individual record is shown to the LLM, not just the first 800 chars.
+            # Parse it so every individual record is shown to the LLM.
             if isinstance(item, str) and item.strip().startswith("["):
                 try:
                     records = json.loads(item)
                     if isinstance(records, list):
                         out.append(f"QueryResult {i} ({len(records)} records):")
                         for j, rec in enumerate(records, 1):
+                            # Strip noise fields so due_date/balance/customer fields
+                            # are never truncated away from the LLM.
+                            if isinstance(rec, dict):
+                                rec = self._slim_record(rec)
                             rec_s = json.dumps(rec) if isinstance(rec, dict) else str(rec)
-                            out.append(f"  [{j}] {rec_s[:600]}")
+                            out.append(f"  [{j}] {rec_s[:800]}")
                         continue
                 except (json.JSONDecodeError, TypeError):
                     pass

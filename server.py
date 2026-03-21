@@ -28,13 +28,9 @@ from observability import start_trace, end_trace, flush
 
 app = FastAPI(title="QA Pipeline Chat (Dummy Chain)", version="1.0")
 
-# CORS (allow frontend to call /chat with preflight)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",  # Vite dev server
-        "http://127.0.0.1:5173"
-    ],
+    allow_origins=["*"],
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
