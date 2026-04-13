@@ -145,6 +145,7 @@ class Orchestrator(LLMJsonMixin):
             debug: bool = False,
             try_llm: bool = True,
             faiss_dir: str = "faiss_store",
+            reports_faiss_dir: str = "faiss_reports_store",
             question: str = "",
             metadata: Dict[str, Any]={},
             jwt_token: Optional[str] = None,
@@ -154,8 +155,10 @@ class Orchestrator(LLMJsonMixin):
         self.debug = debug
         self.try_llm = try_llm
         self.faiss_dir = faiss_dir
+        self.reports_faiss_dir = reports_faiss_dir
         self.router = _LLMRouter() if try_llm else None
         self._faiss_store = None
+        self._reports_faiss_store = None
         # JWT forwarded from the frontend request; takes precedence over QB_JWT_TOKEN env var
         self._jwt_token = jwt_token
         # Set to the new JWT after a successful token refresh (propagated back to the frontend)
@@ -172,6 +175,20 @@ class Orchestrator(LLMJsonMixin):
             store = FaissVectorStoreCosine(persist_dir=self.faiss_dir)
             store.load()
             self._faiss_store = store
+            return store
+        except Exception:
+            return None
+
+    def _get_reports_faiss_store(self):
+        """Lazily load the reports FAISS store once."""
+        if self._reports_faiss_store is not None:
+            return self._reports_faiss_store
+        if FaissVectorStoreCosine is None:
+            return None
+        try:
+            store = FaissVectorStoreCosine(persist_dir=self.reports_faiss_dir)
+            store.load()
+            self._reports_faiss_store = store
             return store
         except Exception:
             return None
@@ -247,6 +264,58 @@ class Orchestrator(LLMJsonMixin):
             lines.append(f"\n{text}")
         return "\n".join(lines)
 
+    def _lookup_report_queries(self, plan: Plan, min_score: float = 0.7) -> Optional[Dict[str, Any]]:
+        """
+        Check if the plan metadata has a matched_report tag from splitter.
+        If yes, query the report catalog vector DB to get pre-built query_sequence.
+        Returns the query_sequence dict if found, else None.
+        """
+        matched_report = plan.metadata.get("matched_report")
+        if not matched_report:
+            return None
+
+        store = self._get_reports_faiss_store()
+        if store is None:
+            return None
+
+        try:
+            hits = store.query(
+                matched_report,
+                k=3,
+                min_score=min_score,
+                filter={"source": "report_catalog"}
+            )
+            if hits and len(hits) > 0:
+                best_hit = hits[0]
+                if best_hit.get("score", 0) >= min_score:
+                    meta = best_hit.get("metadata") or {}
+                    # Check if report_name matches
+                    if meta.get("report_name") == matched_report:
+                        # Load the full YAML to extract query_sequence
+                        import yaml
+                        catalog_path = meta.get("source_file", "metadata/quickbooks_reports.yaml")
+                        if os.path.exists(catalog_path):
+                            with open(catalog_path, "r") as f:
+                                catalog = yaml.safe_load(f) or {}
+                            reports = catalog.get("reports", {})
+                            # Check main reports
+                            if matched_report in reports:
+                                query_seq = reports[matched_report].get("query_sequence")
+                                if query_seq:
+                                    print(f"[ORCHESTRATOR] Using pre-built query_sequence for report: {matched_report}")
+                                    return query_seq
+                            # Check variants
+                            for report_key, report_info in reports.items():
+                                variants = report_info.get("variants", {})
+                                if matched_report in variants:
+                                    query_seq = variants[matched_report].get("query_sequence")
+                                    if query_seq:
+                                        print(f"[ORCHESTRATOR] Using pre-built query_sequence for report variant: {matched_report}")
+                                        return query_seq
+        except Exception as e:
+            print(f"[ORCHESTRATOR] Error looking up report catalog: {e}")
+        return None
+
     def run(self, plan: Plan, memory_text: str = "") -> OrchestratorOutput:
         answers: List[str] = []
         self.question = json.dumps(plan.ordered_steps, indent=2)
@@ -256,22 +325,30 @@ class Orchestrator(LLMJsonMixin):
         max_attempts = 3
         generated_queries: Optional[Dict[str, Any]] = None
         results_list: List[str] = []
-        for attempt in range(1, max_attempts + 1):
-            if generated_queries is None:
-                generated_queries = self._attempt_llm(self.question, memory_text=memory_text)
+
+        # First, check if we have a pre-built query_sequence from the report catalog
+        report_queries = self._lookup_report_queries(plan)
+        if report_queries:
+            generated_queries = report_queries
             results_list = self._execute_generated_queries(generated_queries)
-            # Check for any errors
-            has_error = any(isinstance(r, str) and r.startswith("ERROR:") for r in results_list)
-            if not has_error:
-                break
-            error_texts = "\n".join(
-                r for r in results_list if isinstance(r, str) and r.startswith("ERROR:")
-            )
-            # Regenerate queries for next attempt
-            generated_queries = self._attempt_llm(
-                f"{self.question}\nPrevious errors:\n{error_texts}\nFix previous QuickBooks IDS query errors (entity names, field names, query syntax, WHERE clause operators).",
-                memory_text=memory_text
-            )
+        else:
+            # Fall back to LLM-generated queries
+            for attempt in range(1, max_attempts + 1):
+                if generated_queries is None:
+                    generated_queries = self._attempt_llm(self.question, memory_text=memory_text)
+                results_list = self._execute_generated_queries(generated_queries)
+                # Check for any errors
+                has_error = any(isinstance(r, str) and r.startswith("ERROR:") for r in results_list)
+                if not has_error:
+                    break
+                error_texts = "\n".join(
+                    r for r in results_list if isinstance(r, str) and r.startswith("ERROR:")
+                )
+                # Regenerate queries for next attempt
+                generated_queries = self._attempt_llm(
+                    f"{self.question}\nPrevious errors:\n{error_texts}\nFix previous QuickBooks IDS query errors (entity names, field names, query syntax, WHERE clause operators).",
+                    memory_text=memory_text
+                )
 
         return  OrchestratorOutput(
             original_question=plan.original_question,

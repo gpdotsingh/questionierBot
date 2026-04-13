@@ -291,10 +291,12 @@ class QuestionSplitter:
         provider: Optional[str] = None,
         model: Optional[str] = None,
         faiss_dir: str = "faiss_store",
-        metadata_dirs: Optional[List[str]] = None
+        metadata_dirs: Optional[List[str]] = None,
+        reports_faiss_dir: str = "faiss_reports_store"
     ):
         self.try_llm = try_llm
         self.faiss_dir = faiss_dir
+        self.reports_faiss_dir = reports_faiss_dir
         self.metadata_dirs = metadata_dirs or ["metadata", "metadat"]
         self.router = _LLMRouter() if try_llm else None
         self.meta_cache = _load_table_metadata(self.metadata_dirs)
@@ -335,6 +337,33 @@ class QuestionSplitter:
             context = context[:400] + "..."
         return context, sorted(entities_found)
 
+    def _match_report(self, query: str, min_score: float = 0.7) -> Optional[str]:
+        """
+        Query the report decision guide vector DB to find a matching report.
+        Returns report_name if a strong match is found, else None.
+        """
+        if FaissVectorStoreCosine is None:
+            return None
+        try:
+            store = FaissVectorStoreCosine(persist_dir=self.reports_faiss_dir)
+            store.load()
+            hits = store.query(
+                query,
+                k=3,
+                min_score=min_score,
+                filter={"source": "report_decision_guide"}
+            )
+            if hits and len(hits) > 0:
+                best_hit = hits[0]
+                if best_hit.get("score", 0) >= min_score:
+                    meta = best_hit.get("metadata") or {}
+                    report_name = meta.get("report_name", "")
+                    if report_name and not report_name.startswith("_"):
+                        return report_name
+        except Exception:
+            pass
+        return None
+
     def _fallback_tree(self, query: str) -> Dict[str, Any]:
         augmented = query
         if not (self.router and self.router.provider):
@@ -345,6 +374,10 @@ class QuestionSplitter:
 
     def plan(self, question: str, memory_text: str = "") -> Plan:
         q = _norm(question)
+
+        # Check if this matches a known report
+        matched_report = self._match_report(q)
+
         context_snippet, columns = self._semantic_context(q)
 
         hint_parts: List[str] = []
@@ -360,7 +393,13 @@ class QuestionSplitter:
         used_llm = tree is not None
         if tree is None:
             tree = self._fallback_tree(augmented_query)
-        return Plan(original_question=q, used_llm=used_llm, metadata=self.meta_cache, ordered_steps=tree)
+
+        # Tag the plan with matched report if found
+        plan_metadata = dict(self.meta_cache)
+        if matched_report:
+            plan_metadata["matched_report"] = matched_report
+
+        return Plan(original_question=q, used_llm=used_llm, metadata=plan_metadata, ordered_steps=tree)
 
     def _attempt_llm(self, user_query: str, hint_text: str = "", memory_text: str = "") -> Optional[Dict[str, Any]]:
         if not (self.try_llm and self.router and self.router.provider):

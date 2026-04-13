@@ -146,3 +146,166 @@ def load_yaml_semantic_documents(
 
     print(f"[YAML_LOADER] Loaded {len(docs)} documents from {semantics_yaml_path}")
     return docs
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Report YAML loaders — for the separate report vector DB
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def load_report_catalog_documents(
+    catalog_path: str = "metadata/quickbooks_reports.yaml",
+) -> List[Document]:
+    """Load quickbooks_reports.yaml → one Document per report (+ variants).
+
+    Each document is tagged with ``source=report_catalog`` so queries can
+    filter by source to get only catalog entries (with query_sequence).
+    """
+    raw = _load_yaml(catalog_path)
+    reports = raw.get("reports", {})
+    docs: List[Document] = []
+
+    for report_key, info in reports.items():
+        if not isinstance(info, dict):
+            continue
+        api_name = info.get("api_name", report_key)
+        desc = (info.get("description") or "").strip()
+        category = info.get("category", "")
+        synonyms = info.get("synonyms", [])
+        params = info.get("params", {})
+        query_seq = info.get("query_sequence", {})
+
+        # Build rich text
+        lines = [
+            f"Report: {report_key}",
+            f"API Name: {api_name}",
+            f"Category: {category}",
+            f"Description: {desc}",
+        ]
+        if synonyms:
+            lines.append(f"Synonyms: {', '.join(str(s) for s in synonyms)}")
+        if query_seq:
+            seq_parts = []
+            for qk, qv in query_seq.items():
+                if isinstance(qv, dict):
+                    seq_parts.append(f"{qk}: text={qv.get('text','')} filter={qv.get('filter','')}")
+            lines.append(f"Query Sequence: {'; '.join(seq_parts)}")
+        if params:
+            lines.append(f"Parameters: {', '.join(params.keys())}")
+
+        doc = Document(
+            page_content="\n".join(lines),
+            metadata={
+                "source": "report_catalog",
+                "report_name": report_key,
+                "api_name": str(api_name) if api_name else "",
+                "category": category,
+                "source_file": str(catalog_path),
+                "file_type": "yaml",
+            },
+        )
+        docs.append(doc)
+
+        # Variants (e.g. ProfitAndLossByMonth)
+        for var_key, var_info in (info.get("variants") or {}).items():
+            if not isinstance(var_info, dict):
+                continue
+            var_syns = var_info.get("synonyms", [])
+            var_seq = var_info.get("query_sequence", {})
+            var_lines = [
+                f"Report Variant: {var_key}",
+                f"Parent Report: {report_key}",
+                f"Category: {category}",
+            ]
+            if var_syns:
+                var_lines.append(f"Synonyms: {', '.join(str(s) for s in var_syns)}")
+            if var_seq:
+                seq_parts = []
+                for qk, qv in var_seq.items():
+                    if isinstance(qv, dict):
+                        seq_parts.append(f"{qk}: text={qv.get('text','')} filter={qv.get('filter','')}")
+                var_lines.append(f"Query Sequence: {'; '.join(seq_parts)}")
+
+            var_doc = Document(
+                page_content="\n".join(var_lines),
+                metadata={
+                    "source": "report_catalog",
+                    "report_name": var_key,
+                    "parent_report": report_key,
+                    "category": category,
+                    "source_file": str(catalog_path),
+                    "file_type": "yaml",
+                },
+            )
+            docs.append(var_doc)
+
+    print(f"[YAML_LOADER] Loaded {len(docs)} report catalog documents from {catalog_path}")
+    return docs
+
+
+def load_report_guide_documents(
+    guide_path: str = "metadata/report_decision_guide.yaml",
+) -> List[Document]:
+    """Load report_decision_guide.yaml → one Document per report entry.
+
+    Each document is tagged with ``source=report_decision_guide`` so queries
+    can filter by source to get only decision-guide entries (with use_when /
+    do_not_use_when descriptions).
+    """
+    raw = _load_yaml(guide_path)
+    reports = raw.get("reports", {})
+    docs: List[Document] = []
+
+    # Decision rules as a single document
+    rules = raw.get("decision_rules", {})
+    if rules:
+        rule_lines = ["Report vs IDS Query Decision Rules:"]
+        for rule in (rules.get("use_report_when") or []):
+            rule_lines.append(f"  USE REPORT: {rule}")
+        for rule in (rules.get("use_ids_query_when") or []):
+            rule_lines.append(f"  USE IDS QUERY: {rule}")
+        docs.append(Document(
+            page_content="\n".join(rule_lines),
+            metadata={
+                "source": "report_decision_guide",
+                "report_name": "_decision_rules",
+                "source_file": str(guide_path),
+                "file_type": "yaml",
+            },
+        ))
+
+    for report_key, info in reports.items():
+        if not isinstance(info, dict):
+            continue
+        desc = (info.get("description") or "").strip()
+        synonyms = info.get("synonyms", [])
+        use_when = info.get("use_when", [])
+        do_not_use_when = info.get("do_not_use_when", [])
+
+        lines = [
+            f"Report: {report_key}",
+            f"Description: {desc}",
+        ]
+        if synonyms:
+            lines.append(f"Synonyms: {', '.join(str(s) for s in synonyms)}")
+        if use_when:
+            lines.append("Use this report when:")
+            for w in use_when:
+                lines.append(f"  - {w}")
+        if do_not_use_when:
+            lines.append("Do NOT use this report when:")
+            for w in do_not_use_when:
+                lines.append(f"  - {w}")
+
+        doc = Document(
+            page_content="\n".join(lines),
+            metadata={
+                "source": "report_decision_guide",
+                "report_name": report_key,
+                "source_file": str(guide_path),
+                "file_type": "yaml",
+            },
+        )
+        docs.append(doc)
+
+    print(f"[YAML_LOADER] Loaded {len(docs)} decision guide documents from {guide_path}")
+    return docs

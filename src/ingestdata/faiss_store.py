@@ -71,6 +71,10 @@ class FaissVectorStoreCosine:
         metas: List[Dict[str, Any]] = []
         for i, c in enumerate(chunks):
             m = self._map_meta(c.metadata)
+            # Preserve original Document metadata keys that _map_meta didn't set
+            for key, val in c.metadata.items():
+                if key not in m:
+                    m[key] = val
             m["text"] = c.page_content
             m["chunk_index"] = i
             m["content_length"] = len(c.page_content)
@@ -113,19 +117,45 @@ class FaissVectorStoreCosine:
         print(f"[FAISS] Loaded {self.index.ntotal} vectors.")
 
     # -------- Query --------
-    def query(self, text: str, k: Optional[int] = None, min_score: float = 0.1):
+    def query(
+        self,
+        text: str,
+        k: Optional[int] = None,
+        min_score: float = 0.1,
+        filter: Optional[Dict[str, Any]] = None,
+    ):
+        """Search the index by cosine similarity.
+
+        Args:
+            text:      Query string to embed and search.
+            k:         Max results to return (after filtering).
+            min_score:  Minimum cosine similarity threshold.
+            filter:    Optional metadata filter dict. Each key/value pair
+                       must match the document's metadata exactly.
+                       Example: ``{"source": "report_catalog"}``
+        """
         if self.index is None or self.index.ntotal == 0:
             return []
-        if k is None:
-            k = self.index.ntotal  # return ALL by default
+
+        # When filtering, over-fetch so we still get k results after pruning.
+        fetch_k = self.index.ntotal if filter else (k or self.index.ntotal)
+        want_k = k or self.index.ntotal
 
         q = self.query_model.encode([text]).astype("float32")
         q = _unit_norm(q)
-        scores, idxs = self.index.search(q, k)  # IP in [-1,1]
+        scores, idxs = self.index.search(q, fetch_k)  # IP in [-1,1]
         out = []
         for i, s in zip(idxs[0], scores[0]):
-            if i < 0: continue
-            if s < min_score: continue
+            if i < 0:
+                continue
+            if s < min_score:
+                continue
             meta = self.metadata[i] if i < len(self.metadata) else {}
+            # Apply metadata filter
+            if filter:
+                if not all(meta.get(fk) == fv for fk, fv in filter.items()):
+                    continue
             out.append({"index": int(i), "score": float(s), "metadata": meta})
+            if len(out) >= want_k:
+                break
         return out

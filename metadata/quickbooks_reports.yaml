@@ -1,0 +1,981 @@
+# ══════════════════════════════════════════════════════════════════════════════
+# QuickBooks Online — Report Catalog
+# ══════════════════════════════════════════════════════════════════════════════
+#
+# Each report entry defines:
+#   api_name        : QB Reports API report name (used in report:<api_name>)
+#   description     : What the report shows
+#   synonyms        : Natural-language phrases a user might say to request it
+#   category        : Grouping (financial_statement, receivables, payables, etc.)
+#   query_sequence  : Ready-to-use orchestrator output (Q1..Qn).
+#                     Each Qn has: text, filter, children — matches the exact
+#                     JSON the orchestrator LLM produces. At runtime, just look
+#                     up the report and fire these queries — no LLM needed.
+#   params          : Available filter parameters and their options
+#   output_sections : Key sections/rows visible in the report output
+#
+# Query format:
+#   IDS queries  → text: "select * from <Entity>", filter: "<WHERE clause>"
+#   Report calls → text: "report:<ReportName>",     filter: "<key=value pairs>"
+#
+# ══════════════════════════════════════════════════════════════════════════════
+
+reports:
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # PROFIT AND LOSS (Income Statement)
+  # ─────────────────────────────────────────────────────────────────────────
+  ProfitAndLoss:
+    api_name: ProfitAndLoss
+    description: >
+      Income statement showing total revenue, cost of goods sold, gross profit,
+      operating expenses, and net income/loss for a given period.
+    category: financial_statement
+    synonyms:
+      - profit and loss
+      - P&L
+      - income statement
+      - earnings report
+      - revenue report
+      - revenue summary
+      - net income
+      - net profit
+      - net loss
+      - income and expenses
+      - income vs expenses
+      - how much did we make
+      - how much did we earn
+      - total sales
+      - total revenue
+      - total income
+      - total expenses
+      - operating income
+      - gross profit
+      - earnings
+      - financial performance
+      - how is the business doing
+    query_sequence:
+      Q1:
+        text: "report:ProfitAndLoss"
+        filter: "date_macro=Last_Fiscal_Quarter"
+        children: []
+    params:
+      date_macro:
+        description: "Predefined date range"
+        options:
+          - This_Month
+          - Last_Month
+          - This_Fiscal_Quarter
+          - Last_Fiscal_Quarter
+          - This_Fiscal_Year
+          - Last_Fiscal_Year
+          - This_Week
+          - Last_Week
+          - Today
+      start_date:
+        description: "Custom start date (YYYY-MM-DD), alternative to date_macro"
+      end_date:
+        description: "Custom end date (YYYY-MM-DD)"
+      accounting_method:
+        description: "Accrual or Cash basis"
+        options: [Accrual, Cash]
+        default: Accrual
+      summarize_column_by:
+        description: "Break down columns by dimension"
+        options: [Total, Month, Week, Days, Quarter, Year, Customers, Vendors, Classes, Departments, Employees, ProductsAndServices]
+    output_sections:
+      - Income (by category)
+      - Cost of Goods Sold
+      - Gross Profit
+      - Expenses (by category)
+      - Net Operating Income
+      - Other Income/Expense
+      - Net Income
+    variants:
+      ProfitAndLossByMonth:
+        synonyms:
+          - P&L by month
+          - monthly P&L
+          - monthly income statement
+          - income by month
+          - expenses by month
+          - monthly profit and loss
+          - month over month revenue
+          - monthly revenue breakdown
+          - monthly financial summary
+        query_sequence:
+          Q1:
+            text: "report:ProfitAndLoss"
+            filter: "date_macro=This_Fiscal_Year summarize_column_by=Month"
+            children: []
+      ProfitAndLossByCustomer:
+        synonyms:
+          - P&L by customer
+          - profit by customer
+          - revenue by customer
+          - income by customer
+          - customer profitability
+          - customer revenue breakdown
+          - which customer is most profitable
+          - customer-wise P&L
+          - per-customer income
+          - customer earnings
+        query_sequence:
+          Q1:
+            text: "report:ProfitAndLoss"
+            filter: "date_macro=This_Fiscal_Year summarize_column_by=Customers"
+            children: []
+      ProfitAndLossComparison:
+        synonyms:
+          - P&L comparison
+          - compare P&L
+          - profit and loss vs last year
+          - year over year P&L
+          - P&L YoY
+          - income comparison
+          - compare income statement
+          - how does this year compare
+          - revenue comparison
+          - this year vs last year profit
+        query_sequence:
+          Q1:
+            text: "report:ProfitAndLoss"
+            filter: "date_macro=This_Fiscal_Year"
+            children: []
+          Q2:
+            text: "report:ProfitAndLoss"
+            filter: "date_macro=Last_Fiscal_Year"
+            children: []
+      ProfitAndLossByTagGroup:
+        synonyms:
+          - P&L by tag
+          - P&L by tag group
+          - profit by tag
+          - income by tag
+          - tag-wise P&L
+          - profit and loss by category tag
+          - tagged income statement
+        query_sequence:
+          Q1:
+            text: "report:ProfitAndLoss"
+            filter: "date_macro=This_Fiscal_Year summarize_column_by=ProductsAndServices"
+            children: []
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # PROFIT AND LOSS DETAIL
+  # ─────────────────────────────────────────────────────────────────────────
+  ProfitAndLossDetail:
+    api_name: ProfitAndLossDetail
+    description: >
+      Detailed income statement showing every individual transaction
+      (invoice, sales receipt, bill, expense, etc.) that makes up each
+      income and expense line item. Includes transaction date, type, number,
+      customer/vendor name, memo, and amount.
+    category: financial_statement
+    synonyms:
+      - P&L detail
+      - detailed P&L
+      - detailed income statement
+      - profit and loss detail
+      - detailed profit and loss
+      - income statement detail
+      - transaction-level P&L
+      - itemized income and expenses
+      - show me every transaction in the P&L
+      - all income transactions
+      - all expense transactions
+      - detailed revenue transactions
+      - line item P&L
+    query_sequence:
+      Q1:
+        text: "report:ProfitAndLossDetail"
+        filter: "date_macro=This_Fiscal_Year"
+        children: []
+    params:
+      date_macro:
+        description: "Predefined date range"
+        options: [This_Month, Last_Month, This_Fiscal_Quarter, Last_Fiscal_Quarter, This_Fiscal_Year, Last_Fiscal_Year]
+      start_date:
+        description: "Custom start date (YYYY-MM-DD)"
+      end_date:
+        description: "Custom end date (YYYY-MM-DD)"
+      accounting_method:
+        description: "Accrual or Cash"
+        options: [Accrual, Cash]
+        default: Accrual
+    output_sections:
+      - Income (each transaction with date, type, num, name, memo, amount)
+      - Cost of Goods Sold (per transaction)
+      - Gross Profit
+      - Expenses (per transaction)
+      - Net Income
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # BALANCE SHEET
+  # ─────────────────────────────────────────────────────────────────────────
+  BalanceSheet:
+    api_name: BalanceSheet
+    description: >
+      Point-in-time snapshot of the company's financial position: assets
+      (bank accounts, A/R, inventory, fixed assets), liabilities (A/P,
+      credit cards, loans), and equity.
+    category: financial_statement
+    synonyms:
+      - balance sheet
+      - statement of financial position
+      - financial position
+      - assets and liabilities
+      - assets liabilities equity
+      - net worth
+      - what do we own
+      - what do we owe
+      - company worth
+      - total assets
+      - total liabilities
+      - equity position
+      - book value
+    query_sequence:
+      Q1:
+        text: "report:BalanceSheet"
+        filter: "date_macro=Today"
+        children: []
+    params:
+      date_macro:
+        description: "As-of date"
+        options: [Today, Last_Month, This_Fiscal_Quarter, Last_Fiscal_Quarter, This_Fiscal_Year, Last_Fiscal_Year]
+      start_date:
+        description: "Custom as-of date (YYYY-MM-DD)"
+      accounting_method:
+        description: "Accrual or Cash"
+        options: [Accrual, Cash]
+        default: Accrual
+      summarize_column_by:
+        description: "Break columns by dimension"
+        options: [Total, Month, Quarter, Year]
+    output_sections:
+      - "Assets: Bank Accounts, Accounts Receivable, Other Current Assets, Fixed Assets"
+      - "Liabilities: Accounts Payable, Credit Cards, Other Current Liabilities, Long-Term Liabilities"
+      - "Equity: Opening Balance, Retained Earnings, Net Income"
+    variants:
+      BalanceSheetSummary:
+        synonyms:
+          - balance sheet summary
+          - summarized balance sheet
+          - quick balance sheet
+          - balance sheet overview
+          - high-level balance sheet
+          - financial snapshot
+          - company snapshot
+        query_sequence:
+          Q1:
+            text: "report:BalanceSheet"
+            filter: "date_macro=Today"
+            children: []
+      BalanceSheetComparison:
+        synonyms:
+          - balance sheet comparison
+          - compare balance sheet
+          - balance sheet vs last year
+          - year over year balance sheet
+          - balance sheet YoY
+          - compare assets
+          - how did our financial position change
+          - balance sheet trend
+        query_sequence:
+          Q1:
+            text: "report:BalanceSheet"
+            filter: "date_macro=Today"
+            children: []
+          Q2:
+            text: "report:BalanceSheet"
+            filter: "date_macro=Last_Fiscal_Year"
+            children: []
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # STATEMENT OF CASH FLOWS
+  # ─────────────────────────────────────────────────────────────────────────
+  CashFlow:
+    api_name: CashFlow
+    description: >
+      Shows how cash moves through the business: operating activities
+      (net income + adjustments for A/R, A/P, inventory changes),
+      investing activities, and financing activities. Shows net cash
+      increase and ending cash balance.
+    category: financial_statement
+    synonyms:
+      - cash flow
+      - cash flow statement
+      - statement of cash flows
+      - cash movement
+      - cash position
+      - where did the cash go
+      - cash inflow outflow
+      - operating cash flow
+      - investing activities
+      - financing activities
+      - net cash increase
+      - cash at end of period
+      - how much cash do we have
+      - cash flow analysis
+      - cash summary
+    query_sequence:
+      Q1:
+        text: "report:CashFlow"
+        filter: "date_macro=This_Fiscal_Year"
+        children: []
+    params:
+      date_macro:
+        description: "Period for cash flow"
+        options: [This_Month, Last_Month, This_Fiscal_Quarter, Last_Fiscal_Quarter, This_Fiscal_Year, Last_Fiscal_Year]
+      start_date:
+        description: "Custom start date (YYYY-MM-DD)"
+      end_date:
+        description: "Custom end date (YYYY-MM-DD)"
+      summarize_column_by:
+        description: "Break columns"
+        options: [Total, Month, Quarter, Year]
+    output_sections:
+      - "OPERATING ACTIVITIES: Net Income, A/R changes, A/P changes, Inventory changes"
+      - "INVESTING ACTIVITIES: Fixed asset purchases/sales"
+      - "FINANCING ACTIVITIES: Equity, Loans"
+      - "NET CASH INCREASE FOR PERIOD"
+      - "CASH AT END OF PERIOD"
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # A/R AGING SUMMARY
+  # ─────────────────────────────────────────────────────────────────────────
+  AgedReceivables:
+    api_name: AgedReceivables
+    description: >
+      Accounts receivable aging report. Shows outstanding customer invoices
+      grouped by age buckets: Current, 1-30 days, 31-60, 61-90, 91+ days
+      overdue. Summarized by customer.
+    category: receivables
+    synonyms:
+      - A/R aging
+      - AR aging
+      - accounts receivable aging
+      - aged receivables
+      - receivables aging
+      - aging summary
+      - outstanding invoices by age
+      - overdue invoices summary
+      - who owes us money
+      - customer aging
+      - customer outstanding
+      - how old are our receivables
+      - past due invoices summary
+      - collections report
+      - delinquent accounts
+      - receivables report
+      - open invoices aging
+      - unpaid invoices by age
+      - accounts receivable report
+      - A/R report
+      - AR report
+      - what is outstanding from customers
+    query_sequence:
+      Q1:
+        text: "report:AgedReceivables"
+        filter: "date_macro=Today"
+        children: []
+    params:
+      date_macro:
+        description: "As-of date for aging"
+        options: [Today, Last_Month, This_Fiscal_Quarter]
+      report_date:
+        description: "Custom as-of date (YYYY-MM-DD)"
+      aging_period:
+        description: "Number of days per bucket (default 30)"
+      num_periods:
+        description: "Number of aging buckets (default 4)"
+    output_sections:
+      - "Per-customer rows with columns: Current, 1-30, 31-60, 61-90, 91+, Total"
+      - "TOTAL row at bottom"
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # A/R AGING DETAIL
+  # ─────────────────────────────────────────────────────────────────────────
+  AgedReceivableDetail:
+    api_name: AgedReceivableDetail
+    description: >
+      Detailed accounts receivable aging showing each individual open
+      invoice per customer with date, number, due date, amount, and
+      days overdue.
+    category: receivables
+    synonyms:
+      - A/R aging detail
+      - AR aging detail
+      - detailed receivables aging
+      - receivables detail
+      - open invoice detail
+      - outstanding invoice list
+      - detailed overdue invoices
+      - which invoices are overdue
+      - list of unpaid invoices
+      - aged receivables detail
+    query_sequence:
+      Q1:
+        text: "report:AgedReceivableDetail"
+        filter: "date_macro=Today"
+        children: []
+    params:
+      date_macro:
+        description: "As-of date"
+        options: [Today, Last_Month]
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # A/P AGING SUMMARY
+  # ─────────────────────────────────────────────────────────────────────────
+  AgedPayables:
+    api_name: AgedPayables
+    description: >
+      Accounts payable aging report. Shows outstanding vendor bills
+      grouped by age buckets: Current, 1-30, 31-60, 61-90, 91+ days.
+      Summarized by vendor.
+    category: payables
+    synonyms:
+      - A/P aging
+      - AP aging
+      - accounts payable aging
+      - aged payables
+      - payables aging
+      - outstanding bills by age
+      - overdue bills summary
+      - what do we owe vendors
+      - vendor aging
+      - vendor outstanding
+      - how old are our payables
+      - past due bills
+      - bills due
+      - payables report
+      - open bills aging
+      - unpaid bills by age
+      - accounts payable report
+      - A/P report
+      - AP report
+      - what is owed to vendors
+    query_sequence:
+      Q1:
+        text: "report:AgedPayables"
+        filter: "date_macro=Today"
+        children: []
+    params:
+      date_macro:
+        description: "As-of date for aging"
+        options: [Today, Last_Month]
+      aging_period:
+        description: "Days per bucket (default 30)"
+      num_periods:
+        description: "Number of aging buckets (default 4)"
+    output_sections:
+      - "Per-vendor rows with columns: Current, 1-30, 31-60, 61-90, 91+, Total"
+      - "TOTAL row at bottom"
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # A/P AGING DETAIL
+  # ─────────────────────────────────────────────────────────────────────────
+  AgedPayableDetail:
+    api_name: AgedPayableDetail
+    description: >
+      Detailed accounts payable aging showing each individual open
+      bill per vendor with date, number, due date, amount, and days overdue.
+    category: payables
+    synonyms:
+      - A/P aging detail
+      - AP aging detail
+      - detailed payables aging
+      - payables detail
+      - open bill detail
+      - outstanding bill list
+      - detailed overdue bills
+      - which bills are overdue
+      - list of unpaid bills
+      - aged payables detail
+    query_sequence:
+      Q1:
+        text: "report:AgedPayableDetail"
+        filter: "date_macro=Today"
+        children: []
+    params:
+      date_macro:
+        description: "As-of date"
+        options: [Today, Last_Month]
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # CUSTOMER BALANCE SUMMARY
+  # ─────────────────────────────────────────────────────────────────────────
+  CustomerBalance:
+    api_name: CustomerBalance
+    description: >
+      Total balance owed by each customer. Shows one row per customer
+      with their total open balance across all unpaid invoices.
+    category: receivables
+    synonyms:
+      - customer balance
+      - customer balances
+      - customer balance summary
+      - customer summary
+      - what customers owe
+      - who owes us
+      - customer open balance
+      - customer outstanding balance
+      - receivables by customer
+      - amount owed by customer
+      - how much does each customer owe
+      - customer AR
+    query_sequence:
+      Q1:
+        text: "report:CustomerBalance"
+        filter: ""
+        children: []
+    params:
+      date_macro:
+        description: "As-of date"
+        options: [Today]
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # CUSTOMER BALANCE DETAIL
+  # ─────────────────────────────────────────────────────────────────────────
+  CustomerBalanceDetail:
+    api_name: CustomerBalanceDetail
+    description: >
+      Detailed customer balance showing each open transaction per customer:
+      invoices, payments, credits — with running balance.
+    category: receivables
+    synonyms:
+      - customer balance detail
+      - detailed customer balance
+      - customer open transactions
+      - customer transaction detail
+      - what does this customer owe in detail
+    query_sequence:
+      Q1:
+        text: "report:CustomerBalanceDetail"
+        filter: ""
+        children: []
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # VENDOR BALANCE SUMMARY
+  # ─────────────────────────────────────────────────────────────────────────
+  VendorBalance:
+    api_name: VendorBalance
+    description: >
+      Total balance owed to each vendor. One row per vendor with their
+      total open balance across all unpaid bills.
+    category: payables
+    synonyms:
+      - vendor balance
+      - vendor balances
+      - vendor balance summary
+      - vendor summary
+      - what we owe vendors
+      - what we owe suppliers
+      - vendor open balance
+      - vendor outstanding balance
+      - payables by vendor
+      - amount owed to vendors
+      - how much do we owe each vendor
+      - vendor AP
+    query_sequence:
+      Q1:
+        text: "report:VendorBalance"
+        filter: ""
+        children: []
+    params:
+      date_macro:
+        description: "As-of date"
+        options: [Today]
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # VENDOR BALANCE DETAIL
+  # ─────────────────────────────────────────────────────────────────────────
+  VendorBalanceDetail:
+    api_name: VendorBalanceDetail
+    description: >
+      Detailed vendor balance showing each open bill, payment, and credit
+      per vendor with running balance.
+    category: payables
+    synonyms:
+      - vendor balance detail
+      - detailed vendor balance
+      - vendor open transactions
+      - vendor bill detail
+      - what do we owe this vendor in detail
+    query_sequence:
+      Q1:
+        text: "report:VendorBalanceDetail"
+        filter: ""
+        children: []
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # GENERAL LEDGER
+  # ─────────────────────────────────────────────────────────────────────────
+  GeneralLedger:
+    api_name: GeneralLedger
+    description: >
+      Full general ledger showing every transaction posted to every account.
+      Each row shows date, transaction type, number, name, memo, debit/credit,
+      and running balance for each account.
+    category: accounting
+    synonyms:
+      - general ledger
+      - GL
+      - ledger
+      - ledger detail
+      - full ledger
+      - all account transactions
+      - account activity
+      - detailed account transactions
+      - GL report
+      - general ledger report
+      - book of accounts
+    query_sequence:
+      Q1:
+        text: "report:GeneralLedger"
+        filter: "date_macro=This_Fiscal_Year"
+        children: []
+    params:
+      date_macro:
+        description: "Period"
+        options: [This_Month, Last_Month, This_Fiscal_Quarter, Last_Fiscal_Quarter, This_Fiscal_Year, Last_Fiscal_Year]
+      start_date:
+        description: "Custom start date (YYYY-MM-DD)"
+      end_date:
+        description: "Custom end date (YYYY-MM-DD)"
+      accounting_method:
+        description: "Accrual or Cash"
+        options: [Accrual, Cash]
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # TRIAL BALANCE
+  # ─────────────────────────────────────────────────────────────────────────
+  TrialBalance:
+    api_name: TrialBalance
+    description: >
+      Trial balance listing every account with its debit and credit totals.
+      Used to verify that total debits equal total credits.
+    category: accounting
+    synonyms:
+      - trial balance
+      - TB
+      - debit credit summary
+      - account debit credit
+      - do debits equal credits
+      - accounting trial balance
+      - trial balance report
+    query_sequence:
+      Q1:
+        text: "report:TrialBalance"
+        filter: "date_macro=This_Fiscal_Year"
+        children: []
+    params:
+      date_macro:
+        description: "As-of date"
+        options: [Today, This_Fiscal_Year, Last_Fiscal_Year]
+      accounting_method:
+        description: "Accrual or Cash"
+        options: [Accrual, Cash]
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # TRANSACTION LIST
+  # ─────────────────────────────────────────────────────────────────────────
+  TransactionList:
+    api_name: TransactionList
+    description: >
+      Flat list of all transactions across all types (invoices, bills,
+      payments, expenses, journal entries, etc.) in a date range.
+    category: accounting
+    synonyms:
+      - transaction list
+      - all transactions
+      - transaction history
+      - full transaction list
+      - transaction report
+      - transaction detail
+      - list all transactions
+      - show all transactions
+      - recent transactions
+      - transaction log
+    query_sequence:
+      Q1:
+        text: "report:TransactionList"
+        filter: "date_macro=This_Fiscal_Quarter"
+        children: []
+    params:
+      date_macro:
+        description: "Period"
+        options: [This_Month, Last_Month, This_Fiscal_Quarter, Last_Fiscal_Quarter, This_Fiscal_Year, Last_Fiscal_Year]
+      start_date:
+        description: "Custom start date (YYYY-MM-DD)"
+      end_date:
+        description: "Custom end date (YYYY-MM-DD)"
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # CUSTOMER INCOME (Sales by Customer)
+  # ─────────────────────────────────────────────────────────────────────────
+  CustomerIncome:
+    api_name: CustomerIncome
+    description: >
+      Total income (sales) broken down by customer. Shows how much
+      revenue each customer has generated in the period.
+    category: sales
+    synonyms:
+      - sales by customer
+      - revenue by customer
+      - customer income
+      - customer revenue
+      - customer sales summary
+      - income by customer
+      - top customers by revenue
+      - best customers
+      - customer sales
+      - how much did each customer buy
+    query_sequence:
+      Q1:
+        text: "report:CustomerIncome"
+        filter: "date_macro=This_Fiscal_Year"
+        children: []
+    params:
+      date_macro:
+        description: "Period"
+        options: [This_Month, Last_Month, This_Fiscal_Quarter, This_Fiscal_Year]
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # EXPENSES BY VENDOR
+  # ─────────────────────────────────────────────────────────────────────────
+  VendorExpenses:
+    api_name: VendorExpenses
+    description: >
+      Total expenses broken down by vendor. Shows how much has been
+      spent with each vendor/supplier.
+    category: expenses
+    synonyms:
+      - expenses by vendor
+      - spending by vendor
+      - vendor expenses
+      - vendor spending
+      - how much did we pay each vendor
+      - top vendors by spend
+      - supplier costs
+      - vendor cost summary
+    query_sequence:
+      Q1:
+        text: "report:VendorExpenses"
+        filter: "date_macro=This_Fiscal_Year"
+        children: []
+    params:
+      date_macro:
+        description: "Period"
+        options: [This_Month, Last_Month, This_Fiscal_Quarter, This_Fiscal_Year]
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # REVENUE THIS MONTH (with context)
+  # ─────────────────────────────────────────────────────────────────────────
+  # When users ask "how much revenue this month", the current month may have
+  # no data yet. Fire two queries so the compiler can show context.
+  RevenueThisMonth:
+    api_name: ProfitAndLoss
+    description: >
+      Revenue for the current month with last quarter context for comparison.
+      Two queries ensure meaningful output even if the current month has no
+      transactions yet.
+    category: financial_statement
+    synonyms:
+      - revenue this month
+      - income this month
+      - sales this month
+      - how much did we make this month
+      - this month revenue
+      - this month income
+      - current month revenue
+      - current month sales
+    query_sequence:
+      Q1:
+        text: "report:ProfitAndLoss"
+        filter: "date_macro=This_Month"
+        children: []
+      Q2:
+        text: "report:ProfitAndLoss"
+        filter: "date_macro=Last_Fiscal_Quarter"
+        children: []
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # INVOICES DUE / OVERDUE (IDS-based, not report)
+  # ─────────────────────────────────────────────────────────────────────────
+  InvoicesDueOverdue:
+    api_name: null
+    description: >
+      Individual invoices that are unpaid (balance > 0). Used for "overdue
+      invoices", "invoices due in X days", "past due invoices". This is an
+      IDS query (not a report) — the compiler handles date arithmetic on
+      the due_date field.
+    category: receivables
+    synonyms:
+      - overdue invoices
+      - past due invoices
+      - invoices due
+      - invoices due soon
+      - invoices due in 30 days
+      - invoices due this week
+      - unpaid invoices
+      - open invoices
+      - outstanding invoices
+      - invoices with balance
+    query_sequence:
+      Q1:
+        text: "select * from Invoice"
+        filter: "balance > 0"
+        children: []
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # UNPAID BILLS (IDS-based, not report)
+  # ─────────────────────────────────────────────────────────────────────────
+  BillsDueOverdue:
+    api_name: null
+    description: >
+      Individual bills that are unpaid (balance > 0). Used for "overdue
+      bills", "bills due soon", "unpaid bills". This is an IDS query —
+      the compiler handles date arithmetic on the due_date field.
+    category: payables
+    synonyms:
+      - overdue bills
+      - past due bills
+      - bills due
+      - bills due soon
+      - unpaid bills
+      - open bills
+      - outstanding bills
+      - bills with balance
+    query_sequence:
+      Q1:
+        text: "select * from Bill"
+        filter: "balance > 0"
+        children: []
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # FULL FINANCIAL OVERVIEW (multi-report)
+  # ─────────────────────────────────────────────────────────────────────────
+  FinancialOverview:
+    api_name: null
+    description: >
+      Complete financial health snapshot: P&L + Balance Sheet + Cash Flow
+      in a single request. Three report queries fired in sequence.
+    category: financial_statement
+    synonyms:
+      - financial overview
+      - full financial report
+      - financial health
+      - complete financial summary
+      - company financials
+      - how is the company doing financially
+      - full financial picture
+    query_sequence:
+      Q1:
+        text: "report:ProfitAndLoss"
+        filter: "date_macro=This_Fiscal_Year"
+        children: []
+      Q2:
+        text: "report:BalanceSheet"
+        filter: "date_macro=Today"
+        children: []
+      Q3:
+        text: "report:CashFlow"
+        filter: "date_macro=This_Fiscal_Year"
+        children: []
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # RECEIVABLES + PAYABLES OVERVIEW (multi-report)
+  # ─────────────────────────────────────────────────────────────────────────
+  ARAPOverview:
+    api_name: null
+    description: >
+      Combined receivables and payables aging snapshot. Two report queries.
+    category: receivables
+    synonyms:
+      - AR and AP
+      - receivables and payables
+      - what do we owe and what is owed to us
+      - AR AP summary
+      - aging overview
+      - collections and payables
+    query_sequence:
+      Q1:
+        text: "report:AgedReceivables"
+        filter: "date_macro=Today"
+        children: []
+      Q2:
+        text: "report:AgedPayables"
+        filter: "date_macro=Today"
+        children: []
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SYNONYM → REPORT QUICK LOOKUP
+# ══════════════════════════════════════════════════════════════════════════════
+# Maps common phrases directly to report keys for fast matching.
+
+synonym_index:
+  # P&L family
+  "P&L": ProfitAndLoss
+  "income statement": ProfitAndLoss
+  "profit and loss": ProfitAndLoss
+  "revenue": ProfitAndLoss
+  "net income": ProfitAndLoss
+  "earnings": ProfitAndLoss
+  "total sales": ProfitAndLoss
+  "monthly P&L": ProfitAndLoss.variants.ProfitAndLossByMonth
+  "P&L by month": ProfitAndLoss.variants.ProfitAndLossByMonth
+  "P&L by customer": ProfitAndLoss.variants.ProfitAndLossByCustomer
+  "customer profitability": ProfitAndLoss.variants.ProfitAndLossByCustomer
+  "P&L comparison": ProfitAndLoss.variants.ProfitAndLossComparison
+  "P&L detail": ProfitAndLossDetail
+  "detailed P&L": ProfitAndLossDetail
+
+  # Balance Sheet family
+  "balance sheet": BalanceSheet
+  "financial position": BalanceSheet
+  "net worth": BalanceSheet
+  "assets and liabilities": BalanceSheet
+  "balance sheet summary": BalanceSheet.variants.BalanceSheetSummary
+  "balance sheet comparison": BalanceSheet.variants.BalanceSheetComparison
+
+  # Cash Flow
+  "cash flow": CashFlow
+  "statement of cash flows": CashFlow
+  "cash position": CashFlow
+
+  # A/R family
+  "A/R aging": AgedReceivables
+  "AR aging": AgedReceivables
+  "accounts receivable": AgedReceivables
+  "overdue invoices": InvoicesDueOverdue
+  "who owes us": AgedReceivables
+  "customer balance": CustomerBalance
+  "customer balances": CustomerBalance
+
+  # A/P family
+  "A/P aging": AgedPayables
+  "AP aging": AgedPayables
+  "accounts payable": AgedPayables
+  "overdue bills": BillsDueOverdue
+  "what we owe": AgedPayables
+  "vendor balance": VendorBalance
+  "vendor balances": VendorBalance
+
+  # Accounting
+  "general ledger": GeneralLedger
+  "GL": GeneralLedger
+  "trial balance": TrialBalance
+  "all transactions": TransactionList
+  "transaction list": TransactionList
+
+  # Sales / Expenses
+  "sales by customer": CustomerIncome
+  "expenses by vendor": VendorExpenses
+
+  # Multi-report
+  "financial overview": FinancialOverview
+  "company financials": FinancialOverview
+  "AR and AP": ARAPOverview
+  "revenue this month": RevenueThisMonth

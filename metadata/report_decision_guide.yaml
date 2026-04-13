@@ -1,0 +1,410 @@
+# ══════════════════════════════════════════════════════════════════════════════
+# Report Decision Guide — for the Splitter
+# ══════════════════════════════════════════════════════════════════════════════
+#
+# Purpose: Help the splitter decide whether a user question should trigger
+#          a REPORT call or an IDS entity query (select * from <Entity>).
+#
+# Rule of thumb:
+#   -> Aggregates, totals, summaries, trends, period comparisons  ->  REPORT
+#   -> Individual records, specific transactions, filtering lists  ->  IDS QUERY
+#
+# The splitter reads this file and injects report awareness into its prompt
+# so the LLM (or rule-based fallback) can tag Q-nodes with the right type.
+# ══════════════════════════════════════════════════════════════════════════════
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DECISION RULES — when to use reports vs IDS queries
+# ─────────────────────────────────────────────────────────────────────────────
+decision_rules:
+  use_report_when:
+    - "User asks for aggregated financial summaries (total revenue, total expenses, net income, gross profit)"
+    - "User asks for period-based analysis (this month, last quarter, year-to-date, fiscal year)"
+    - "User asks for comparisons across time (this year vs last year, month-over-month)"
+    - "User asks for breakdown by dimension (by customer, by month, by vendor, by tag)"
+    - "User asks for aging buckets (how old are receivables, 30-60-90 day aging)"
+    - "User asks for balance summaries (customer balances, vendor balances)"
+    - "User asks for financial position (assets, liabilities, equity, net worth)"
+    - "User asks for cash flow analysis (operating, investing, financing activities)"
+    - "User mentions report names directly (P and L, balance sheet, cash flow, trial balance)"
+
+  use_ids_query_when:
+    - "User asks for specific individual records (show me invoice 1042, find customer John)"
+    - "User asks to filter or list specific transactions (invoices over 5000, bills due next week)"
+    - "User asks about specific entity attributes (customer email, item price, vendor address)"
+    - "User asks for record counts or existence checks (how many invoices, any overdue bills)"
+    - "User wants to drill into one transaction or entity (details of PO-2045, employee info)"
+    - "User asks about relationships between specific records (which invoices did customer X pay)"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# AVAILABLE REPORTS — concise descriptions for the splitter
+# ─────────────────────────────────────────────────────────────────────────────
+reports:
+
+  ProfitAndLoss:
+    description: >
+      Income statement for a date range. Shows total revenue broken down by
+      income categories, cost of goods sold, gross profit, all operating
+      expenses by category, and final net income or loss. Use this for any
+      question about revenue, sales totals, expenses, profit, or earnings.
+    use_when:
+      - "revenue or income or sales totals or expenses or profit or loss or earnings"
+      - "how much did we make or how is the business doing or financial performance"
+      - "monthly or quarterly or yearly income breakdowns"
+    do_not_use_when:
+      - "user asks for a specific invoice or sale transaction"
+      - "user wants a list of individual expense records"
+    synonyms:
+      - "P and L"
+      - "income statement"
+      - "revenue report"
+      - "earnings"
+      - "net income"
+      - "net profit"
+      - "gross profit"
+
+  ProfitAndLossDetail:
+    description: >
+      Transaction-level income statement. Same structure as P and L but expands
+      every line to show each individual invoice, bill, expense, and receipt
+      that contributed to the totals. Very large output — use only when the
+      user explicitly asks for transaction-level detail within the P and L.
+    use_when:
+      - "detailed P and L"
+      - "show every transaction in income statement"
+      - "itemized income and expenses"
+      - "line-item P and L"
+    do_not_use_when:
+      - "user just asks for total revenue or net income (use ProfitAndLoss instead)"
+    synonyms:
+      - "detailed P and L"
+      - "P and L detail"
+      - "itemized income statement"
+
+  BalanceSheet:
+    description: >
+      Point-in-time financial snapshot showing what the company owns (assets
+      like bank accounts, accounts receivable, inventory, fixed assets), what
+      it owes (liabilities like accounts payable, credit cards, loans), and
+      owner equity. Always as-of a specific date, not a range. Use for
+      questions about financial position, net worth, total assets, or total
+      liabilities.
+    use_when:
+      - "assets or liabilities or equity or net worth or financial position"
+      - "what do we own or what do we owe or company worth"
+      - "balance sheet comparisons (current vs prior year)"
+    do_not_use_when:
+      - "user asks about a specific bank transaction or deposit"
+      - "user wants individual AR or AP records (use aging reports instead)"
+    synonyms:
+      - "balance sheet"
+      - "financial position"
+      - "assets and liabilities"
+      - "net worth"
+
+  CashFlow:
+    description: >
+      Statement of cash flows showing how cash moved during a period.
+      Categorized into operating activities (net income adjusted for AR,
+      AP, and inventory changes), investing activities (equipment purchases),
+      and financing activities (loans, equity). Shows net cash increase and
+      ending cash balance. Use for any cash-related questions.
+    use_when:
+      - "cash flow or cash position or cash movement or cash inflow outflow"
+      - "where did the cash go or how much cash do we have"
+      - "operating or investing or financing cash analysis"
+    do_not_use_when:
+      - "user asks about a specific bank deposit or payment transaction"
+    synonyms:
+      - "cash flow statement"
+      - "statement of cash flows"
+      - "cash position"
+      - "cash summary"
+
+  AgedReceivables:
+    description: >
+      Accounts receivable aging summary. Groups all outstanding (unpaid)
+      customer invoices into age buckets — Current, 1-30 days, 31-60 days,
+      61-90 days, and 91+ days overdue. One row per customer with totals.
+      Use when user asks about overall receivables health or collections.
+    use_when:
+      - "AR aging or receivables aging or aging summary or collections report"
+      - "who owes us money or how old are our receivables"
+      - "outstanding invoices grouped by age"
+    do_not_use_when:
+      - "user asks for a specific customer individual unpaid invoices (use IDS Invoice query)"
+      - "user wants total revenue (use ProfitAndLoss)"
+    synonyms:
+      - "AR aging"
+      - "receivables aging"
+      - "aging summary"
+      - "collections report"
+
+  AgedReceivableDetail:
+    description: >
+      Detailed AR aging showing each individual open invoice per customer
+      with invoice date, number, due date, amount, open balance, and days
+      overdue. Use when user needs invoice-level aging detail, not just
+      summary totals per customer.
+    use_when:
+      - "which invoices are overdue or list of unpaid invoices"
+      - "detailed receivables aging or open invoice detail"
+    do_not_use_when:
+      - "user just wants summary aging buckets (use AgedReceivables)"
+    synonyms:
+      - "AR aging detail"
+      - "detailed receivables"
+      - "open invoice list"
+
+  AgedPayables:
+    description: >
+      Accounts payable aging summary. Groups all outstanding (unpaid) vendor
+      bills into age buckets — Current, 1-30, 31-60, 61-90, 91+ days.
+      One row per vendor with totals. Use for overall payables health check.
+    use_when:
+      - "AP aging or payables aging or vendor aging"
+      - "what do we owe vendors or how old are our payables"
+      - "outstanding bills grouped by age"
+    do_not_use_when:
+      - "user asks for a specific vendor individual bills (use IDS Bill query)"
+    synonyms:
+      - "AP aging"
+      - "payables aging"
+      - "vendor aging"
+      - "bills due"
+
+  AgedPayableDetail:
+    description: >
+      Detailed AP aging showing each individual open bill per vendor with
+      bill date, number, due date, amount, open balance, and days overdue.
+      Use when user needs bill-level aging detail.
+    use_when:
+      - "which bills are overdue or list of unpaid bills"
+      - "detailed payables aging or open bill detail"
+    do_not_use_when:
+      - "user just wants summary aging buckets (use AgedPayables)"
+    synonyms:
+      - "AP aging detail"
+      - "detailed payables"
+      - "open bill list"
+
+  CustomerBalance:
+    description: >
+      Simple one-row-per-customer summary showing total open balance owed
+      by each customer across all their unpaid invoices. Quick snapshot of
+      who owes what. Use for what do customers owe questions.
+    use_when:
+      - "customer balances or who owes us or customer open balance"
+      - "how much does each customer owe"
+    do_not_use_when:
+      - "user wants aging buckets (use AgedReceivables)"
+      - "user wants per-invoice detail (use AgedReceivableDetail or IDS Invoice query)"
+    synonyms:
+      - "customer balances"
+      - "customer summary"
+      - "receivables by customer"
+
+  CustomerBalanceDetail:
+    description: >
+      Detailed customer balance showing each open transaction (invoices,
+      payments, credits) per customer with a running balance. Use when user
+      wants to see exactly which transactions make up a customer balance.
+    use_when:
+      - "customer open transactions or customer transaction detail"
+      - "what does customer X owe in detail"
+    do_not_use_when:
+      - "user just wants total balance per customer (use CustomerBalance)"
+    synonyms:
+      - "detailed customer balance"
+      - "customer open transactions"
+
+  VendorBalance:
+    description: >
+      Simple one-row-per-vendor summary showing total open balance owed to
+      each vendor across all unpaid bills. Quick snapshot of what you owe.
+    use_when:
+      - "vendor balances or what we owe vendors or vendor open balance"
+      - "how much do we owe each vendor"
+    do_not_use_when:
+      - "user wants aging buckets (use AgedPayables)"
+      - "user wants per-bill detail (use AgedPayableDetail or IDS Bill query)"
+    synonyms:
+      - "vendor balances"
+      - "vendor summary"
+      - "payables by vendor"
+
+  VendorBalanceDetail:
+    description: >
+      Detailed vendor balance showing each open bill, payment, and credit
+      per vendor with running balance. Use when user wants transaction-level
+      breakdown of what is owed to a specific vendor.
+    use_when:
+      - "vendor open transactions or vendor bill detail"
+      - "what do we owe vendor X in detail"
+    do_not_use_when:
+      - "user just wants total per vendor (use VendorBalance)"
+    synonyms:
+      - "detailed vendor balance"
+      - "vendor open transactions"
+
+  GeneralLedger:
+    description: >
+      Full general ledger showing every transaction posted to every GL
+      account. Each row has date, transaction type, number, name, memo,
+      debit, credit, and running balance per account. Very large output.
+      Use only when user explicitly asks for the full ledger or all
+      account-level activity.
+    use_when:
+      - "general ledger or GL report or all account transactions"
+      - "detailed account transactions or book of accounts"
+    do_not_use_when:
+      - "user asks for specific account balance (use TrialBalance or BalanceSheet)"
+      - "user wants P and L or income info (use ProfitAndLoss)"
+    synonyms:
+      - "GL"
+      - "general ledger"
+      - "ledger detail"
+      - "account activity"
+
+  TrialBalance:
+    description: >
+      Lists every GL account with its total debit and credit amounts.
+      Used to verify accounting integrity (debits equal credits). Compact
+      output — one row per account. Use when user asks about trial balance
+      or wants to check if books are balanced.
+    use_when:
+      - "trial balance or do debits equal credits"
+      - "debit credit summary or account debit credit totals"
+    do_not_use_when:
+      - "user wants full transaction detail per account (use GeneralLedger)"
+    synonyms:
+      - "trial balance"
+      - "TB"
+      - "debit credit summary"
+
+  TransactionList:
+    description: >
+      Flat chronological list of all transactions across all types
+      (invoices, bills, payments, expenses, journal entries, deposits,
+      etc.) within a date range. Use when user wants to see all recent
+      transactions or everything that happened this month without
+      filtering to a specific entity type.
+    use_when:
+      - "all transactions or transaction history or transaction log"
+      - "list all transactions or recent transactions"
+      - "show everything from this month"
+    do_not_use_when:
+      - "user asks for only invoices or only bills (use IDS query for that entity)"
+    synonyms:
+      - "all transactions"
+      - "transaction history"
+      - "transaction log"
+
+  CustomerIncome:
+    description: >
+      Revenue broken down by customer. Shows total income each customer
+      generated through invoices, sales receipts, and credits in a period.
+      Use for top customers, revenue by customer, customer profitability
+      questions that need aggregated sales per customer.
+    use_when:
+      - "sales by customer or revenue by customer or customer income"
+      - "top customers by revenue or best customers"
+    do_not_use_when:
+      - "user wants individual invoices for a customer (use IDS Invoice query)"
+      - "user wants total company revenue without customer breakdown (use ProfitAndLoss)"
+    synonyms:
+      - "sales by customer"
+      - "customer revenue"
+      - "customer sales summary"
+
+  VendorExpenses:
+    description: >
+      Expenses broken down by vendor. Shows total spending with each vendor
+      through bills, bill payments, and purchases in a period. Use for
+      top vendors by spend or how much did we pay each vendor questions.
+    use_when:
+      - "expenses by vendor or vendor spending or supplier costs"
+      - "top vendors by spend or how much did we pay each vendor"
+    do_not_use_when:
+      - "user wants individual bills for a vendor (use IDS Bill query)"
+      - "user wants total company expenses without vendor breakdown (use ProfitAndLoss)"
+    synonyms:
+      - "expenses by vendor"
+      - "vendor spending"
+      - "supplier costs"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# KEYWORD -> DECISION QUICK MAP
+# ─────────────────────────────────────────────────────────────────────────────
+# Fast lookup: if any of these phrases appear in the user question,
+# the splitter should tag the Q-node as type=report with the given report name.
+
+keyword_to_report:
+  # P and L / Income
+  "profit and loss": ProfitAndLoss
+  "income statement": ProfitAndLoss
+  "net income": ProfitAndLoss
+  "net profit": ProfitAndLoss
+  "total revenue": ProfitAndLoss
+  "total sales": ProfitAndLoss
+  "total income": ProfitAndLoss
+  "total expenses": ProfitAndLoss
+  "gross profit": ProfitAndLoss
+  "operating income": ProfitAndLoss
+  "earnings": ProfitAndLoss
+  "how much did we make": ProfitAndLoss
+  "how is the business doing": ProfitAndLoss
+  "financial performance": ProfitAndLoss
+  "revenue this month": ProfitAndLoss
+  "revenue this year": ProfitAndLoss
+  "monthly income statement": ProfitAndLoss
+  "income by month": ProfitAndLoss
+  "revenue by customer": ProfitAndLoss
+  "customer profitability": ProfitAndLoss
+  "detailed income statement": ProfitAndLossDetail
+
+  # Balance Sheet
+  "balance sheet": BalanceSheet
+  "financial position": BalanceSheet
+  "net worth": BalanceSheet
+  "total assets": BalanceSheet
+  "total liabilities": BalanceSheet
+  "assets and liabilities": BalanceSheet
+  "what do we own": BalanceSheet
+  "company worth": BalanceSheet
+
+  # Cash Flow
+  "cash flow": CashFlow
+  "cash position": CashFlow
+  "statement of cash flows": CashFlow
+  "where did the cash go": CashFlow
+  "how much cash": CashFlow
+
+  # AR
+  "receivables aging": AgedReceivables
+  "aging summary": AgedReceivables
+  "who owes us money": AgedReceivables
+  "collections report": AgedReceivables
+  "customer balance": CustomerBalance
+  "customer balances": CustomerBalance
+  "who owes us": CustomerBalance
+
+  # AP
+  "payables aging": AgedPayables
+  "what do we owe vendors": AgedPayables
+  "vendor balance": VendorBalance
+  "vendor balances": VendorBalance
+
+  # Accounting
+  "general ledger": GeneralLedger
+  "trial balance": TrialBalance
+  "all transactions": TransactionList
+  "transaction history": TransactionList
+  "transaction list": TransactionList
+
+  # Sales / Expenses
+  "sales by customer": CustomerIncome
+  "customer income": CustomerIncome
+  "expenses by vendor": VendorExpenses
+  "vendor spending": VendorExpenses
